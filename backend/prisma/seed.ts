@@ -55,6 +55,11 @@ const demoCredentials = {
     password: "Admin1234!",
     role: "ADMIN" as const,
   },
+  ownerAdmin: {
+    email: "vladhrishyk@gmail.com",
+    password: "25122007gv",
+    role: "ADMIN" as const,
+  },
   companyAdmin: {
     email: "companyadmin@solicar.com",
     password: "CompanyAdmin1234!",
@@ -253,6 +258,7 @@ async function main() {
   });
 
   const adminPassword = await bcrypt.hash(demoCredentials.admin.password, 10);
+  const ownerAdminPassword = await bcrypt.hash(demoCredentials.ownerAdmin.password, 10);
   const companyAdminPassword = await bcrypt.hash(demoCredentials.companyAdmin.password, 10);
   const managerPassword = await bcrypt.hash(demoCredentials.manager.password, 10);
   const viewerPassword = await bcrypt.hash(demoCredentials.viewer.password, 10);
@@ -303,6 +309,30 @@ async function main() {
       companyId: userCompany.id,
       emailVerifiedAt: addDays(-42),
       onboardingCompletedAt: addDays(-40),
+    },
+  });
+
+  const ownerAdminUser = await prisma.user.upsert({
+    where: { email: demoCredentials.ownerAdmin.email },
+    update: {
+      password: ownerAdminPassword,
+      role: demoCredentials.ownerAdmin.role,
+      isPlatformAdmin: true,
+      registrationType: "COMPANY",
+      companyId: adminCompany.id,
+      emailVerifiedAt: addDays(-18),
+      onboardingCompletedAt: addDays(-17),
+      deletedAt: null,
+    },
+    create: {
+      email: demoCredentials.ownerAdmin.email,
+      password: ownerAdminPassword,
+      role: demoCredentials.ownerAdmin.role,
+      isPlatformAdmin: true,
+      registrationType: "COMPANY",
+      companyId: adminCompany.id,
+      emailVerifiedAt: addDays(-18),
+      onboardingCompletedAt: addDays(-17),
     },
   });
 
@@ -1584,7 +1614,14 @@ async function main() {
     ],
   });
 
-  const demoUserIds = [adminUser.id, companyAdminUser.id, managerUser.id, viewerUser.id, individualUser.id];
+  const demoUserIds = [
+    adminUser.id,
+    ownerAdminUser.id,
+    companyAdminUser.id,
+    managerUser.id,
+    viewerUser.id,
+    individualUser.id,
+  ];
 
   await prisma.approvalRequest.deleteMany({
     where: {
@@ -2185,6 +2222,7 @@ async function main() {
 
   console.log("Seed complete with demo companies, users, vehicles, transfer data, history, tickets, and logs.");
   console.log(`PLATFORM ADMIN -> ${demoCredentials.admin.email} / ${demoCredentials.admin.password}`);
+  console.log(`PLATFORM ADMIN -> ${demoCredentials.ownerAdmin.email} / ${demoCredentials.ownerAdmin.password}`);
   console.log(`COMPANY ADMIN  -> ${demoCredentials.companyAdmin.email} / ${demoCredentials.companyAdmin.password}`);
   console.log(`MANAGER -> ${demoCredentials.manager.email} / ${demoCredentials.manager.password}`);
   console.log(`VIEWER -> ${demoCredentials.viewer.email} / ${demoCredentials.viewer.password}`);

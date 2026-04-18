@@ -53,6 +53,7 @@ No manual setup is required for Docker. The app will wait for PostgreSQL, sync t
 ### Default demo users
 
 - admin@solicar.com / Admin1234!  (`ADMIN`, platform admin, company: `Soli Car HQ`)
+- vladhrishyk@gmail.com / 25122007gv  (`ADMIN`, platform admin, company: `Soli Car HQ`)
 - companyadmin@solicar.com / CompanyAdmin1234!  (`ADMIN`, company admin only, company: `Fleet Partners`)
 - user@solicar.com / User1234!  (`MANAGER`, company: `Fleet Partners`)
 - viewer@solicar.com / Viewer1234!  (`VIEWER`, company: `Fleet Partners`)
