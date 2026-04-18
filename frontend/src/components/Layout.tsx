@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import {
   Link,
   NavLink,
@@ -20,23 +20,24 @@ import {
 } from "../api";
 import { getErrorMessage } from "../errors";
 import { useAuthStore } from "../store";
-import ActivityPage from "../pages/ActivityPage";
-import AnalyticsPage from "../pages/AnalyticsPage";
-import BillingPage from "../pages/BillingPage";
-import CompaniesPage from "../pages/CompaniesPage";
-import DashboardPage from "../pages/DashboardPage";
-import HistoryPage from "../pages/HistoryPage";
-import MapPage from "../pages/MapPage";
-import RemindersPage from "../pages/RemindersPage";
-import SettingsPage from "../pages/SettingsPage";
-import SupportPage from "../pages/SupportPage";
-import VehicleDetailsPage from "../pages/VehicleDetailsPage";
-import VehicleFormPage from "../pages/VehicleFormPage";
-import VehiclesPage from "../pages/VehiclesPage";
-import NotificationsPage from "../pages/NotificationsPage";
 import NotificationCenterPanel from "./NotificationCenterPanel";
 import StatusBadge from "./StatusBadge";
 import { GlobalSearchResult, NotificationSummary } from "../types";
+
+const DashboardPage = lazy(() => import("../pages/DashboardPage"));
+const VehiclesPage = lazy(() => import("../pages/VehiclesPage"));
+const CompaniesPage = lazy(() => import("../pages/CompaniesPage"));
+const AnalyticsPage = lazy(() => import("../pages/AnalyticsPage"));
+const BillingPage = lazy(() => import("../pages/BillingPage"));
+const MapPage = lazy(() => import("../pages/MapPage"));
+const RemindersPage = lazy(() => import("../pages/RemindersPage"));
+const ActivityPage = lazy(() => import("../pages/ActivityPage"));
+const NotificationsPage = lazy(() => import("../pages/NotificationsPage"));
+const SettingsPage = lazy(() => import("../pages/SettingsPage"));
+const SupportPage = lazy(() => import("../pages/SupportPage"));
+const VehicleFormPage = lazy(() => import("../pages/VehicleFormPage"));
+const VehicleDetailsPage = lazy(() => import("../pages/VehicleDetailsPage"));
+const HistoryPage = lazy(() => import("../pages/HistoryPage"));
 
 const iconClassName = "h-5 w-5";
 
@@ -129,6 +130,17 @@ const emptyNotificationSummary: NotificationSummary = {
   highPriorityUnreadCount: 0,
   items: [],
 };
+
+const ContentRouteFallback = () => (
+  <div className="rounded-[28px] border border-slate-200 bg-white px-6 py-10 shadow-[0_24px_80px_-52px_rgba(15,23,42,0.32)]">
+    <div className="h-4 w-40 animate-pulse rounded-full bg-slate-200" />
+    <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="h-28 animate-pulse rounded-[22px] bg-slate-100" />
+      ))}
+    </div>
+  </div>
+);
 
 const Layout = () => {
   const token = useAuthStore((state) => state.token);
@@ -716,23 +728,25 @@ const Layout = () => {
             </div>
           </div>
 
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/vehicles" element={<VehiclesPage />} />
-            <Route path="/companies" element={<CompaniesPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-            <Route path="/billing" element={<BillingPage />} />
-            <Route path="/map" element={<MapPage />} />
-            <Route path="/reminders" element={<RemindersPage />} />
-            <Route path="/activity" element={<ActivityPage />} />
-            <Route path="/notifications" element={<NotificationsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/support" element={<SupportPage />} />
-            <Route path="/new" element={<VehicleFormPage />} />
-            <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
-            <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
-            <Route path="/vehicles/:id/history" element={<HistoryPage />} />
-          </Routes>
+          <Suspense fallback={<ContentRouteFallback />}>
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/vehicles" element={<VehiclesPage />} />
+              <Route path="/companies" element={<CompaniesPage />} />
+              <Route path="/analytics" element={<AnalyticsPage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/map" element={<MapPage />} />
+              <Route path="/reminders" element={<RemindersPage />} />
+              <Route path="/activity" element={<ActivityPage />} />
+              <Route path="/notifications" element={<NotificationsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/support" element={<SupportPage />} />
+              <Route path="/new" element={<VehicleFormPage />} />
+              <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
+              <Route path="/vehicles/:id/edit" element={<VehicleFormPage />} />
+              <Route path="/vehicles/:id/history" element={<HistoryPage />} />
+            </Routes>
+          </Suspense>
         </main>
       </div>
     </div>

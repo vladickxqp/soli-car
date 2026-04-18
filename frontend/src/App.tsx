@@ -1,21 +1,32 @@
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import AdminLayout from "./components/AdminLayout";
 import Layout from "./components/Layout";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import LoginPage from "./pages/LoginPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import PublicVehicleSharePage from "./pages/PublicVehicleSharePage";
-import RegisterPage from "./pages/RegisterPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import AdminApprovalsPage from "./pages/admin/AdminApprovalsPage";
-import AdminCompaniesPage from "./pages/admin/AdminCompaniesPage";
-import AdminLogsPage from "./pages/admin/AdminLogsPage";
-import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminVehiclesPage from "./pages/admin/AdminVehiclesPage";
 import { isPlatformAdmin } from "./permissions";
 import { useAuthStore } from "./store";
+
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterPage = lazy(() => import("./pages/RegisterPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const PublicVehicleSharePage = lazy(() => import("./pages/PublicVehicleSharePage"));
+const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminCompaniesPage = lazy(() => import("./pages/admin/AdminCompaniesPage"));
+const AdminVehiclesPage = lazy(() => import("./pages/admin/AdminVehiclesPage"));
+const AdminTicketsPage = lazy(() => import("./pages/admin/AdminTicketsPage"));
+const AdminApprovalsPage = lazy(() => import("./pages/admin/AdminApprovalsPage"));
+const AdminLogsPage = lazy(() => import("./pages/admin/AdminLogsPage"));
+
+const RouteFallback = () => (
+  <div className="flex min-h-screen items-center justify-center px-6 py-10">
+    <div className="w-full max-w-xl rounded-[28px] border border-slate-200 bg-white px-6 py-10 text-center shadow-[0_24px_80px_-48px_rgba(15,23,42,0.35)]">
+      <div className="mx-auto h-10 w-10 animate-pulse rounded-full bg-teal-500/20" />
+      <p className="mt-4 text-sm font-medium text-slate-600">Loading workspace...</p>
+    </div>
+  </div>
+);
 
 const needsOnboarding = (user: ReturnType<typeof useAuthStore.getState>["user"]) =>
   Boolean(user?.emailVerifiedAt) && !user?.onboardingCompletedAt;
@@ -66,81 +77,83 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
 function App() {
   return (
     <div className="app-shell min-h-screen">
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            <AuthRoute>
-              <LoginPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            <AuthRoute>
-              <RegisterPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/forgot-password"
-          element={
-            <AuthRoute>
-              <ForgotPasswordPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/reset-password"
-          element={
-            <AuthRoute>
-              <ResetPasswordPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/verify-email"
-          element={
-            <AuthRoute>
-              <VerifyEmailPage />
-            </AuthRoute>
-          }
-        />
-        <Route
-          path="/onboarding"
-          element={
-            <OnboardingRoute>
-              <OnboardingPage />
-            </OnboardingRoute>
-          }
-        />
-        <Route path="/public/vehicles/:token" element={<PublicVehicleSharePage />} />
-        <Route
-          path="/admin/*"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route index element={<Navigate to="/admin/users" replace />} />
-          <Route path="users" element={<AdminUsersPage />} />
-          <Route path="companies" element={<AdminCompaniesPage />} />
-          <Route path="vehicles" element={<AdminVehiclesPage />} />
-          <Route path="tickets" element={<AdminTicketsPage />} />
-          <Route path="approvals" element={<AdminApprovalsPage />} />
-          <Route path="logs" element={<AdminLogsPage />} />
-        </Route>
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              <AuthRoute>
+                <LoginPage />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/register"
+            element={
+              <AuthRoute>
+                <RegisterPage />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <AuthRoute>
+                <ForgotPasswordPage />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/reset-password"
+            element={
+              <AuthRoute>
+                <ResetPasswordPage />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/verify-email"
+            element={
+              <AuthRoute>
+                <VerifyEmailPage />
+              </AuthRoute>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <OnboardingRoute>
+                <OnboardingPage />
+              </OnboardingRoute>
+            }
+          />
+          <Route path="/public/vehicles/:token" element={<PublicVehicleSharePage />} />
+          <Route
+            path="/admin/*"
+            element={
+              <AdminRoute>
+                <AdminLayout />
+              </AdminRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/users" replace />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="companies" element={<AdminCompaniesPage />} />
+            <Route path="vehicles" element={<AdminVehiclesPage />} />
+            <Route path="tickets" element={<AdminTicketsPage />} />
+            <Route path="approvals" element={<AdminApprovalsPage />} />
+            <Route path="logs" element={<AdminLogsPage />} />
+          </Route>
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </Suspense>
     </div>
   );
 }
