@@ -22,7 +22,44 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import prisma from "./utils/prisma.js";
 
 const app = express();
-app.use(cors({ origin: true, credentials: true }));
+
+const defaultAllowedOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:4173",
+];
+
+const configuredOrigins = (process.env.CORS_ALLOWED_ORIGINS ?? "")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const appUrl = (process.env.APP_URL ?? "").trim();
+const allowedOrigins = new Set(
+  [...defaultAllowedOrigins, ...configuredOrigins, ...(appUrl ? [appUrl] : [])].filter(Boolean),
+);
+
+app.use(
+  cors({
+    credentials: true,
+    origin: (origin, callback) => {
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      if (process.env.NODE_ENV !== "production" && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+  }),
+);
 app.use("/billing/webhook", billingWebhookRouter);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

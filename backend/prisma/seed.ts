@@ -182,6 +182,35 @@ const buildVehicleRecord = (overrides: {
 });
 
 async function main() {
+  const temporaryProspectUsers = await prisma.user.findMany({
+    where: {
+      email: {
+        startsWith: "demo.verify.",
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (temporaryProspectUsers.length > 0) {
+    await prisma.user.deleteMany({
+      where: {
+        id: {
+          in: temporaryProspectUsers.map((user) => user.id),
+        },
+      },
+    });
+  }
+
+  await prisma.company.deleteMany({
+    where: {
+      name: {
+        startsWith: "Demo Prospect ",
+      },
+    },
+  });
+
   const adminCompany = await prisma.company.upsert({
     where: { name: "Soli Car HQ" },
     update: {},
@@ -198,6 +227,24 @@ async function main() {
     where: { name: "Individual Workspace" },
     update: {},
     create: { name: "Individual Workspace" },
+  });
+
+  const mobilityCompany = await prisma.company.upsert({
+    where: { name: "Soli Mobility GmbH" },
+    update: {},
+    create: { name: "Soli Mobility GmbH" },
+  });
+
+  const logisticsCompany = await prisma.company.upsert({
+    where: { name: "Urban Route Logistics" },
+    update: {},
+    create: { name: "Urban Route Logistics" },
+  });
+
+  const serviceCompany = await prisma.company.upsert({
+    where: { name: "Nordic Service Hub" },
+    update: {},
+    create: { name: "Nordic Service Hub" },
   });
 
   await prisma.subscription.upsert({
@@ -250,6 +297,63 @@ async function main() {
     create: {
       companyId: individualCompany.id,
       stripeCustomerId: "cus_mock_individual_workspace",
+      stripeSubscriptionId: null,
+      plan: "FREE",
+      status: "ACTIVE",
+      currentPeriodEnd: null,
+    },
+  });
+
+  await prisma.subscription.upsert({
+    where: { companyId: mobilityCompany.id },
+    update: {
+      stripeCustomerId: "cus_mock_soli_mobility",
+      stripeSubscriptionId: "sub_mock_soli_mobility",
+      plan: "PRO",
+      status: "ACTIVE",
+      currentPeriodEnd: addDays(30),
+    },
+    create: {
+      companyId: mobilityCompany.id,
+      stripeCustomerId: "cus_mock_soli_mobility",
+      stripeSubscriptionId: "sub_mock_soli_mobility",
+      plan: "PRO",
+      status: "ACTIVE",
+      currentPeriodEnd: addDays(30),
+    },
+  });
+
+  await prisma.subscription.upsert({
+    where: { companyId: logisticsCompany.id },
+    update: {
+      stripeCustomerId: "cus_mock_urban_route",
+      stripeSubscriptionId: "sub_mock_urban_route",
+      plan: "PRO",
+      status: "ACTIVE",
+      currentPeriodEnd: addDays(30),
+    },
+    create: {
+      companyId: logisticsCompany.id,
+      stripeCustomerId: "cus_mock_urban_route",
+      stripeSubscriptionId: "sub_mock_urban_route",
+      plan: "PRO",
+      status: "ACTIVE",
+      currentPeriodEnd: addDays(30),
+    },
+  });
+
+  await prisma.subscription.upsert({
+    where: { companyId: serviceCompany.id },
+    update: {
+      stripeCustomerId: "cus_mock_nordic_service",
+      stripeSubscriptionId: null,
+      plan: "FREE",
+      status: "ACTIVE",
+      currentPeriodEnd: null,
+    },
+    create: {
+      companyId: serviceCompany.id,
+      stripeCustomerId: "cus_mock_nordic_service",
       stripeSubscriptionId: null,
       plan: "FREE",
       status: "ACTIVE",
@@ -407,6 +511,87 @@ async function main() {
       onboardingCompletedAt: addDays(-20),
     },
   });
+
+  await prisma.user.upsert({
+    where: { email: "mobility.ops@solicar.demo" },
+    update: {
+      password: managerPassword,
+      role: "MANAGER",
+      isPlatformAdmin: false,
+      registrationType: "COMPANY",
+      companyId: mobilityCompany.id,
+      emailVerifiedAt: addDays(-16),
+      onboardingCompletedAt: addDays(-15),
+      deletedAt: null,
+    },
+    create: {
+      email: "mobility.ops@solicar.demo",
+      password: managerPassword,
+      role: "MANAGER",
+      isPlatformAdmin: false,
+      registrationType: "COMPANY",
+      companyId: mobilityCompany.id,
+      emailVerifiedAt: addDays(-16),
+      onboardingCompletedAt: addDays(-15),
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "route.dispatch@solicar.demo" },
+    update: {
+      password: managerPassword,
+      role: "MANAGER",
+      isPlatformAdmin: false,
+      registrationType: "COMPANY",
+      companyId: logisticsCompany.id,
+      emailVerifiedAt: addDays(-14),
+      onboardingCompletedAt: addDays(-13),
+      deletedAt: null,
+    },
+    create: {
+      email: "route.dispatch@solicar.demo",
+      password: managerPassword,
+      role: "MANAGER",
+      isPlatformAdmin: false,
+      registrationType: "COMPANY",
+      companyId: logisticsCompany.id,
+      emailVerifiedAt: addDays(-14),
+      onboardingCompletedAt: addDays(-13),
+    },
+  });
+
+  await prisma.user.upsert({
+    where: { email: "service.nordic@solicar.demo" },
+    update: {
+      password: managerPassword,
+      role: "MANAGER",
+      isPlatformAdmin: false,
+      registrationType: "COMPANY",
+      companyId: serviceCompany.id,
+      emailVerifiedAt: addDays(-12),
+      onboardingCompletedAt: addDays(-11),
+      deletedAt: null,
+    },
+    create: {
+      email: "service.nordic@solicar.demo",
+      password: managerPassword,
+      role: "MANAGER",
+      isPlatformAdmin: false,
+      registrationType: "COMPANY",
+      companyId: serviceCompany.id,
+      emailVerifiedAt: addDays(-12),
+      onboardingCompletedAt: addDays(-11),
+    },
+  });
+
+  const demoCompanyIds = [
+    adminCompany.id,
+    userCompany.id,
+    individualCompany.id,
+    mobilityCompany.id,
+    logisticsCompany.id,
+    serviceCompany.id,
+  ];
 
   await prisma.companyInvitation.deleteMany({
     where: {
@@ -647,13 +832,140 @@ async function main() {
       longitude: 12.373075,
       lastLocationUpdateOffset: -1,
     }),
+    buildVehicleRecord({
+      companyId: mobilityCompany.id,
+      model: "Skoda Enyaq Coupe RS",
+      vin: "SCDEMO00000000007",
+      plate: "B-SM-7007",
+      driver: "Carla Weiss",
+      status: "ACTIVE",
+      mileage: 26840,
+      yearlyMileage: 22000,
+      price: 54800,
+      contractValue: 49900,
+      interest: 3.0,
+      leasingRate: 629,
+      insuranceCost: 1170,
+      taxPerYear: 0,
+      firstRegistrationOffset: -260,
+      tuvOffset: 88,
+      contractStartOffset: -250,
+      contractEndOffset: 210,
+      billingFromOffset: -250,
+      billedToOffset: 210,
+      insuranceStartOffset: -250,
+      insuranceEndOffset: 82,
+      paymentDateOffset: 9,
+      lastUpdateOffset: -2,
+      customerNumber: "SM-7007",
+      inventoryNumber: "SM-EV-7007",
+      latitude: 52.5206,
+      longitude: 13.3862,
+      lastLocationUpdateOffset: -1,
+    }),
+    buildVehicleRecord({
+      companyId: mobilityCompany.id,
+      model: "Renault Megane E-Tech",
+      vin: "SCDEMO00000000008",
+      plate: "B-SM-7008",
+      driver: "Marta Schulz",
+      status: "ACTIVE",
+      mileage: 15420,
+      yearlyMileage: 18000,
+      price: 41750,
+      contractValue: 38900,
+      interest: 2.8,
+      leasingRate: 489,
+      insuranceCost: 940,
+      taxPerYear: 0,
+      firstRegistrationOffset: -140,
+      tuvOffset: 220,
+      contractStartOffset: -135,
+      contractEndOffset: 460,
+      billingFromOffset: -135,
+      billedToOffset: 460,
+      insuranceStartOffset: -135,
+      insuranceEndOffset: 145,
+      paymentDateOffset: 11,
+      lastUpdateOffset: -4,
+      customerNumber: "SM-7008",
+      inventoryNumber: "SM-EV-7008",
+      latitude: 52.4974,
+      longitude: 13.4285,
+      lastLocationUpdateOffset: -2,
+    }),
+    buildVehicleRecord({
+      companyId: logisticsCompany.id,
+      model: "Ford Transit Custom",
+      vin: "SCDEMO00000000009",
+      plate: "HH-URL-9009",
+      driver: "David Neumann",
+      status: "ACTIVE",
+      mileage: 70210,
+      yearlyMileage: 36000,
+      price: 43800,
+      contractValue: 39500,
+      interest: 4.1,
+      leasingRate: 559,
+      insuranceCost: 1380,
+      taxPerYear: 240,
+      firstRegistrationOffset: -640,
+      tuvOffset: 11,
+      contractStartOffset: -620,
+      contractEndOffset: 60,
+      billingFromOffset: -620,
+      billedToOffset: 60,
+      insuranceStartOffset: -365,
+      insuranceEndOffset: 16,
+      paymentDateOffset: 4,
+      lastUpdateOffset: -1,
+      customerNumber: "URL-9009",
+      inventoryNumber: "URL-VAN-9009",
+      latitude: 53.5488,
+      longitude: 9.9872,
+      lastLocationUpdateOffset: -1,
+    }),
+    buildVehicleRecord({
+      companyId: serviceCompany.id,
+      model: "BMW X3 xDrive30e",
+      vin: "SCDEMO00000000010",
+      plate: "K-NSH-1010",
+      driver: "Jonas Keller",
+      status: "MAINTENANCE",
+      mileage: 38440,
+      yearlyMileage: 26000,
+      price: 61250,
+      contractValue: 55800,
+      interest: 3.4,
+      leasingRate: 719,
+      insuranceCost: 1280,
+      taxPerYear: 210,
+      firstRegistrationOffset: -410,
+      tuvOffset: 34,
+      contractStartOffset: -402,
+      contractEndOffset: 130,
+      billingFromOffset: -402,
+      billedToOffset: 130,
+      insuranceStartOffset: -365,
+      insuranceEndOffset: 37,
+      paymentDateOffset: 8,
+      lastUpdateOffset: -2,
+      customerNumber: "NSH-1010",
+      inventoryNumber: "NSH-SUV-1010",
+      latitude: 50.9375,
+      longitude: 6.9603,
+      lastLocationUpdateOffset: -3,
+      hadPreviousAccidents: true,
+      damageStatus: "UNDER_REPAIR",
+      damageNotes: "Workshop diagnostics are active after a depot-side parking impact.",
+    }),
   ];
 
   const seedVehicleVins = vehiclesToSeed.map((vehicle) => vehicle.vin);
   const extraDemoVehicles = await prisma.vehicle.findMany({
     where: {
       companyId: {
-        in: [adminCompany.id, userCompany.id, individualCompany.id],
+        in: demoCompanyIds,
       },
       vin: {
         notIn: seedVehicleVins,

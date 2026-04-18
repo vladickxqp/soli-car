@@ -21,7 +21,8 @@ describe("auth routes", () => {
 
   it("registers a company workspace account without granting platform admin access and requires email verification", async () => {
     prismaMock.user.findUnique.mockResolvedValue(null);
-    prismaMock.company.upsert.mockResolvedValue({
+    prismaMock.company.findUnique.mockResolvedValue(null);
+    prismaMock.company.create.mockResolvedValue({
       id: "company-1",
       name: "Acme Fleet",
     });
@@ -32,11 +33,10 @@ describe("auth routes", () => {
       plan: "FREE",
       status: "ACTIVE",
     });
-    prismaMock.user.count.mockResolvedValue(0);
     prismaMock.user.create.mockResolvedValue({
       id: "user-1",
       email: "admin@acme.test",
-      role: "ADMIN",
+      role: "MANAGER",
       companyId: "company-1",
       isPlatformAdmin: false,
       registrationType: "COMPANY",
@@ -62,7 +62,33 @@ describe("auth routes", () => {
       requiresEmailVerification: true,
       email: "admin@acme.test",
     });
+    expect(prismaMock.user.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          role: "MANAGER",
+          isPlatformAdmin: false,
+        }),
+      }),
+    );
     expect(prismaMock.emailVerificationToken.create).toHaveBeenCalled();
+  });
+
+  it("rejects company registration when the workspace name already exists", async () => {
+    prismaMock.user.findUnique.mockResolvedValue(null);
+    prismaMock.company.findUnique.mockResolvedValue({
+      id: "company-existing-1",
+    });
+
+    const response = await request(app).post("/auth/register").send({
+      email: "manager@acme.test",
+      password: "Secret123!",
+      companyName: "Acme Fleet",
+      registrationType: "COMPANY",
+    });
+
+    expect(response.status).toBe(409);
+    expect(response.body.code).toBe("COMPANY_NAME_ALREADY_EXISTS");
+    expect(prismaMock.user.create).not.toHaveBeenCalled();
   });
 
   it("blocks login before email verification", async () => {

@@ -12,6 +12,7 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const PublicVehicleSharePage = lazy(() => import("./pages/PublicVehicleSharePage"));
+const LandingPage = lazy(() => import("./pages/LandingPage"));
 const AdminUsersPage = lazy(() => import("./pages/admin/AdminUsersPage"));
 const AdminCompaniesPage = lazy(() => import("./pages/admin/AdminCompaniesPage"));
 const AdminVehiclesPage = lazy(() => import("./pages/admin/AdminVehiclesPage"));
@@ -75,10 +76,24 @@ const AdminRoute = ({ children }: { children: JSX.Element }) => {
 };
 
 function App() {
+  const token = useAuthStore((state) => state.token);
+
   return (
     <div className="app-shell min-h-screen">
       <Suspense fallback={<RouteFallback />}>
         <Routes>
+          <Route
+            path="/"
+            element={
+              token ? (
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              ) : (
+                <LandingPage />
+              )
+            }
+          />
           <Route
             path="/login"
             element={

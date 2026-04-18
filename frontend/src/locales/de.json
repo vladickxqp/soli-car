@@ -64,7 +64,8 @@
     },
     "registration": {
       "companyTitle": "Als Unternehmen registrieren",
-      "companyDescription": "Erstellt einen Unternehmens-Workspace. Der erste Benutzer wird Firmenadmin, aber kein Plattform-Admin.",
+      "companyDescription": "Erstellt einen Unternehmens-Workspace fuer Ihr Flottenteam. Plattform-Admin-Zugriff wird niemals automatisch vergeben.",
+      "companyHint": "Die Unternehmensregistrierung erstellt einen eigenen Workspace und startet mit einem operativen Manager-Konto. Erweiterte Admin-Rechte werden spaeter bewusst vergeben.",
       "individualTitle": "Als Einzelbenutzer registrieren",
       "individualDescription": "Erstellt einen persoenlichen Workspace fuer den taeglichen Betrieb ohne Plattform-Admin-Zugriff.",
       "individualHint": "Fuer dieses Konto wird automatisch ein persoenlicher Workspace angelegt."
@@ -128,6 +129,107 @@
       "kicker": "Workspace preferences",
       "title": "Choose your daily working defaults",
       "subtitle": "These settings are stored locally and can be changed later in Settings."
+    }
+  },
+  "landing": {
+    "headerSubtitle": "Mandantenfaehige Flottensteuerung",
+    "hero": {
+      "kicker": "Enterprise-Flottenmanagement",
+      "title": "Flottenbetrieb mit klarer Eigentuemerschaft, Audit-Trail und Sicht auf mehrere Firmen.",
+      "subtitle": "Soli Car gibt Operations-Teams einen sicheren Workspace fuer Fahrzeuge, Dokumente, Schaeden, Wartung, Transfers und Analysen ueber mehrere Firmen hinweg."
+    },
+    "cta": {
+      "login": "Login",
+      "register": "Registrieren"
+    },
+    "stats": {
+      "companies": {
+        "label": "Firmenstruktur",
+        "value": "8 Firmen",
+        "description": "Trennen Sie Fuhrparkbesitz, Benutzer und Analysen sauber nach Firmenscope."
+      },
+      "vehicles": {
+        "label": "Operative Flotte",
+        "value": "20+ Fahrzeuge",
+        "description": "Zeigen Sie aktive, uebertragene, archivierte und servicegebundene Datensaetze in einem Produkt."
+      },
+      "activity": {
+        "label": "Operativer Verlauf",
+        "value": "Volle Historie",
+        "description": "Jeder Transfer, Incident, Wartungseintrag und jede Freigabe bleibt sichtbar."
+      }
+    },
+    "snapshot": {
+      "kicker": "Demo-Snapshot",
+      "title": "Gebaut fuer echte Flottenablaeufe, nicht nur fuer CRUD-Masken.",
+      "subtitle": "Der Demo-Workspace zeigt aktuelle Firmenzuordnung, operative Fristen, Transferhistorie und Flottenanalysen so, dass auch nicht-technische Stakeholder das Produkt sofort verstehen.",
+      "items": {
+        "transfers": {
+          "title": "Firmenbesitz bleibt eindeutig",
+          "description": "Jedes Fahrzeug gehoert aktuell genau zu einer Firma, waehrend die Transferhistorie erhalten bleibt."
+        },
+        "compliance": {
+          "title": "Fristen werden vor dem Risiko sichtbar",
+          "description": "TUEV-, Versicherungs- und Wartungshinweise kommen aus demselben operativen Datensatz."
+        },
+        "ownership": {
+          "title": "Dokumente, Schaeden und Wartung bleiben verbunden",
+          "description": "Operativer Kontext folgt dem Fahrzeug ueber Updates, Freigaben und Archivansichten hinweg."
+        }
+      }
+    },
+    "features": {
+      "kicker": "Was Soli Car abdeckt",
+      "title": "Eine Produktpraesentation, die Stakeholder in Minuten verstehen.",
+      "subtitle": "Die Landing Page erklaert, wie Soli Car operative Teams unterstuetzt, ohne die Komplexitaet echter Multi-Company-Flotten zu verstecken.",
+      "items": {
+        "fleet": {
+          "title": "Flottenmanagement",
+          "description": "Steuern Sie Fahrzeugoperationen aus einem Register mit Statuskontrolle, Exporten und rollenbasierten Aktionen."
+        },
+        "companies": {
+          "title": "Multi-Company-Struktur",
+          "description": "Trennen Sie Firmeneigentum, Benutzer und Sichtbarkeit sauber, ohne die zentrale Uebersicht zu verlieren."
+        },
+        "history": {
+          "title": "Historienverfolgung",
+          "description": "Transfers, Lifecycle-Aenderungen und sensible Aktionen bleiben auditfaehig sichtbar."
+        },
+        "maintenance": {
+          "title": "Wartungseintraege",
+          "description": "Speichern Sie Servicehistorie, Erinnerungen, Kosten und Reparaturfortschritt direkt am Fahrzeug."
+        },
+        "documents": {
+          "title": "Dokumente und Uploads",
+          "description": "Halten Sie Vertraege, Versicherungen und Belege direkt am richtigen Datensatz."
+        },
+        "analytics": {
+          "title": "Analysen und Warnungen",
+          "description": "Dashboards erklaeren Flottengroesse, Fristen, Firmenverteilung und operatives Risiko."
+        }
+      }
+    },
+    "assurance": {
+      "visibility": {
+        "kicker": "Sichtbarkeit",
+        "title": "Klare Firmengrenzen",
+        "description": "Fahrzeuge, Benutzer und Firmenseiten machen die aktuelle Eigentuemerschaft pro Datensatz sofort sichtbar."
+      },
+      "security": {
+        "kicker": "Vertrauen",
+        "title": "Sicherer Kontozugang",
+        "description": "E-Mail-Verifizierung, saubere Berechtigungen und private Uploads lassen die Demo produktionsnah wirken."
+      },
+      "demo": {
+        "kicker": "Storytelling",
+        "title": "Starke Demo-Daten",
+        "description": "Firmen, Transfers, Incident- und Wartungsdaten sorgen dafuer, dass das Produkt sofort lebendig wirkt."
+      }
+    },
+    "finalCta": {
+      "kicker": "Walkthrough starten",
+      "title": "Workspace oeffnen und die Flotten-Demo erkunden.",
+      "subtitle": "Nutzen Sie den sicheren Login, um von der Produktpraesentation in Dashboards, Firmenansichten und Fahrzeugoperationen zu wechseln."
     }
   },
   "dashboard": {
@@ -198,6 +300,17 @@
       "previous": "Zurück",
       "next": "Weiter"
     },
+    "companiesKicker": "Firmenzuordnung",
+    "companiesTitle": "Flottenverteilung nach Firma",
+    "companiesSubtitle": "Machen Sie deutlich, welche Firma jedes Fahrzeug aktuell besitzt und wie sich die Flotte ueber den Workspace verteilt.",
+    "openCompanies": "Firmen oeffnen",
+    "companiesEmptyTitle": "Keine Firmenverteilung verfuegbar",
+    "companiesEmptyDescription": "Erstellen oder importieren Sie Fahrzeuge, um die Multi-Company-Uebersicht zu fuellen.",
+    "companyOwnership": "{{count}} Fahrzeuge aktuell zugeordnet",
+    "companyVehicles": "Fahrzeuge",
+    "companyMileage": "Gesamtkilometer",
+    "companyAverageMileage": "Durchschnittskilometer",
+    "companyCost": "Geplante Kosten",
     "recentActivityTitle": "Letzte Aktivitaet",
     "recentActivitySubtitle": "Behalten Sie operative Veraenderungen bei Fahrzeugen, Dokumenten, Support und Freigaben im Blick."
   },
@@ -1132,6 +1245,10 @@
       "RESET_TOKEN_INVALID_OR_EXPIRED": "Dieser Reset-Link ist ungueltig oder abgelaufen.",
       "EMAIL_NOT_VERIFIED": "Bestaetigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden.",
       "EMAIL_VERIFICATION_TOKEN_INVALID_OR_EXPIRED": "Dieser Bestaetigungslink ist ungueltig oder abgelaufen.",
+      "COMPANY_NAME_ALREADY_EXISTS": "Ein Workspace mit diesem Firmennamen existiert bereits.",
+      "LOGIN_RATE_LIMITED": "Zu viele Login-Versuche. Bitte versuchen Sie es in Kuerze erneut.",
+      "PASSWORD_RESET_RATE_LIMITED": "Zu viele Passwort-Reset-Anfragen. Bitte versuchen Sie es in Kuerze erneut.",
+      "VERIFICATION_RATE_LIMITED": "Zu viele Verifizierungsanfragen. Bitte versuchen Sie es in Kuerze erneut.",
       "APPROVAL_NOT_FOUND": "Die Freigabeanfrage wurde nicht gefunden.",
       "APPROVAL_ALREADY_RESOLVED": "Diese Freigabeanfrage wurde bereits bearbeitet.",
       "UNSUPPORTED_FILE_TYPE": "Dieser Dateityp ist nicht erlaubt.",

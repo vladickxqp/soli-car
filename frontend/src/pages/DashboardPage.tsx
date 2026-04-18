@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { fetchActivity, fetchAnalytics, fetchVehicles, resolveAssetUrl } from "../api";
+import { fetchActivity, fetchAdvancedAnalytics, fetchAnalytics, fetchVehicles, resolveAssetUrl } from "../api";
 import ActivityFeedList from "../components/ActivityFeedList";
 import EmptyState from "../components/EmptyState";
 import LoadingCard from "../components/LoadingCard";
@@ -9,10 +9,10 @@ import NotificationPanel from "../components/NotificationPanel";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
 import { getErrorMessage } from "../errors";
-import { formatDate, formatNumber } from "../formatters";
+import { formatCurrency, formatDate, formatNumber } from "../formatters";
 import { canManageVehicles } from "../permissions";
 import { useAuthStore } from "../store";
-import { ActivityFeedItem, DashboardSummary, VehicleListItem } from "../types";
+import { ActivityFeedItem, AdvancedAnalytics, DashboardSummary, VehicleListItem } from "../types";
 
 const DashboardPage = () => {
   const token = useAuthStore((state) => state.token);
@@ -20,6 +20,7 @@ const DashboardPage = () => {
   const { t } = useTranslation();
 
   const [analytics, setAnalytics] = useState<DashboardSummary | null>(null);
+  const [advancedAnalytics, setAdvancedAnalytics] = useState<AdvancedAnalytics | null>(null);
   const [recentVehicles, setRecentVehicles] = useState<VehicleListItem[]>([]);
   const [activity, setActivity] = useState<ActivityFeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,7 @@ const DashboardPage = () => {
 
     Promise.all([
       fetchAnalytics(token),
+      fetchAdvancedAnalytics(token),
       fetchVehicles(token, {
         page: 1,
         pageSize: 4,
@@ -49,12 +51,13 @@ const DashboardPage = () => {
         pageSize: 5,
       }),
     ])
-      .then(([summary, vehiclePage, activityPage]) => {
+      .then(([summary, advancedSummary, vehiclePage, activityPage]) => {
         if (cancelled) {
           return;
         }
 
         setAnalytics(summary);
+        setAdvancedAnalytics(advancedSummary);
         setRecentVehicles(vehiclePage.items);
         setActivity(activityPage.items);
         setError("");
@@ -84,6 +87,8 @@ const DashboardPage = () => {
       stable: notifications.filter((item) => item.severity === "green").length,
     };
   }, [analytics?.notifications]);
+
+  const companyBreakdown = advancedAnalytics?.vehiclesPerCompany ?? [];
 
   return (
     <div className="space-y-6">
@@ -202,6 +207,73 @@ const DashboardPage = () => {
                 <p className="mt-3 text-2xl font-semibold text-emerald-600">{alertSummary.stable}</p>
               </div>
             </div>
+          </div>
+
+          <div className="shell-panel p-5 sm:p-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="shell-kicker">{t("dashboard.companiesKicker")}</p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("dashboard.companiesTitle")}</h2>
+                <p className="mt-2 text-sm text-slate-500">{t("dashboard.companiesSubtitle")}</p>
+              </div>
+              <Link to="/companies" className="app-btn-secondary">
+                {t("dashboard.openCompanies")}
+              </Link>
+            </div>
+
+            {loading ? (
+              <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                <LoadingCard label={t("dashboard.loadingAnalytics")} />
+                <LoadingCard label={t("dashboard.loadingAnalytics")} />
+              </div>
+            ) : companyBreakdown.length === 0 ? (
+              <div className="mt-5">
+                <EmptyState
+                  title={t("dashboard.companiesEmptyTitle")}
+                  description={t("dashboard.companiesEmptyDescription")}
+                />
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                {companyBreakdown.slice(0, 6).map((company) => (
+                  <article key={company.companyId} className="shell-muted p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-base font-semibold text-slate-950">{company.companyName}</p>
+                        <p className="mt-1 text-sm text-slate-500">
+                          {t("dashboard.companyOwnership", { count: formatNumber(company.vehicleCount) })}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyVehicles")}</p>
+                        <p className="mt-1 text-lg font-semibold text-slate-950">{formatNumber(company.vehicleCount)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyMileage")}</p>
+                        <p className="mt-2 text-sm font-medium text-slate-900">
+                          {t("units.kilometers", { value: formatNumber(company.totalMileage) })}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyAverageMileage")}</p>
+                        <p className="mt-2 text-sm font-medium text-slate-900">
+                          {t("units.kilometers", { value: formatNumber(company.averageMileage) })}
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-white px-4 py-3">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyCost")}</p>
+                        <p className="mt-2 text-sm font-medium text-slate-900">
+                          {formatCurrency(company.totalLeasingCost + company.totalInsuranceCost)}
+                        </p>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="shell-panel p-5 sm:p-6">

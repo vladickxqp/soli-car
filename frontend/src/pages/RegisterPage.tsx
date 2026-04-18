@@ -143,16 +143,21 @@ const RegisterPage = () => {
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           {registrationType === "COMPANY" && !invitationToken ? (
-            <label className="block text-sm font-medium text-slate-200">
-              {t("auth.companyName")}
-              <input
-                autoComplete="organization"
-                value={companyName}
-                onChange={(event) => setCompanyName(event.target.value)}
-                className="field-input-dark mt-2"
-                required
-              />
-            </label>
+            <>
+              <label className="block text-sm font-medium text-slate-200">
+                {t("auth.companyName")}
+                <input
+                  autoComplete="organization"
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                  className="field-input-dark mt-2"
+                  required
+                />
+              </label>
+              <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
+                {t("auth.registration.companyHint")}
+              </div>
+            </>
           ) : (
             <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-300">
               {t("auth.registration.individualHint")}

@@ -64,7 +64,8 @@
     },
     "registration": {
       "companyTitle": "Register as company",
-      "companyDescription": "Creates a company workspace. The first user becomes a company admin for that workspace, but not a platform admin.",
+      "companyDescription": "Creates a company workspace for your fleet team. Platform admin access is never granted automatically.",
+      "companyHint": "Company registration creates a dedicated workspace and starts with an operational manager account. Elevated admin rights are assigned deliberately later.",
       "individualTitle": "Register as individual user",
       "individualDescription": "Creates a personal workspace for daily operations. You can manage your own data without receiving platform admin access.",
       "individualHint": "A personal workspace will be created automatically for this account."
@@ -130,6 +131,107 @@
       "subtitle": "These settings are stored locally and can be changed later in Settings."
     }
   },
+  "landing": {
+    "headerSubtitle": "Multi-company fleet operations",
+    "hero": {
+      "kicker": "Enterprise fleet management",
+      "title": "Fleet operations with clear ownership, audit trails and multi-company visibility.",
+      "subtitle": "Soli Car gives operations teams one secure workspace for vehicles, documents, incidents, maintenance, transfers and analytics across every company in the fleet structure."
+    },
+    "cta": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "stats": {
+      "companies": {
+        "label": "Company structure",
+        "value": "8 companies",
+        "description": "Separate fleet ownership, users and analytics by company scope."
+      },
+      "vehicles": {
+        "label": "Operational fleet",
+        "value": "20+ vehicles",
+        "description": "Show active, transferred, archived and service-bound records in one product."
+      },
+      "activity": {
+        "label": "Operational trace",
+        "value": "Full history",
+        "description": "Every transfer, incident, maintenance event and approval stays visible."
+      }
+    },
+    "snapshot": {
+      "kicker": "Demo snapshot",
+      "title": "Built for real fleet workflows, not just CRUD screens.",
+      "subtitle": "The demo workspace highlights current company ownership, operational deadlines, transfer history and fleet-level analytics so non-technical stakeholders can understand the product immediately.",
+      "items": {
+        "transfers": {
+          "title": "Company ownership stays explicit",
+          "description": "Each vehicle belongs to one company right now, with transfer history preserved for review."
+        },
+        "compliance": {
+          "title": "Deadlines are visible before they become risks",
+          "description": "TUV, insurance and maintenance reminders are surfaced from the same operational dataset."
+        },
+        "ownership": {
+          "title": "Documents, incidents and maintenance stay connected",
+          "description": "Operational context follows the vehicle record across updates, approvals and archive views."
+        }
+      }
+    },
+    "features": {
+      "kicker": "What Soli Car covers",
+      "title": "A product presentation stakeholders can understand in minutes.",
+      "subtitle": "The landing experience explains how Soli Car supports operational teams without hiding the complexity of real multi-company fleet management.",
+      "items": {
+        "fleet": {
+          "title": "Fleet management",
+          "description": "Run vehicle operations from one registry with status control, exports and role-aware actions."
+        },
+        "companies": {
+          "title": "Multi-company structure",
+          "description": "Keep company ownership, users and fleet visibility separated without losing central oversight."
+        },
+        "history": {
+          "title": "History tracking",
+          "description": "Transfers, lifecycle changes and sensitive actions stay visible through audit-friendly history."
+        },
+        "maintenance": {
+          "title": "Maintenance records",
+          "description": "Store service history, reminders, costs and repair progress alongside the vehicle."
+        },
+        "documents": {
+          "title": "Documents and uploads",
+          "description": "Keep contracts, insurance files and supporting evidence attached to the right record."
+        },
+        "analytics": {
+          "title": "Analytics and alerts",
+          "description": "Use dashboards to explain fleet size, deadlines, company distribution and operational risk."
+        }
+      }
+    },
+    "assurance": {
+      "visibility": {
+        "kicker": "Visibility",
+        "title": "Clear company boundaries",
+        "description": "Vehicles, users and company pages make current ownership obvious for every active record."
+      },
+      "security": {
+        "kicker": "Trust",
+        "title": "Secure account access",
+        "description": "Email verification, scoped permissions and private uploads help the demo feel production-ready."
+      },
+      "demo": {
+        "kicker": "Storytelling",
+        "title": "Strong demo data",
+        "description": "Seeded companies, transfers, incidents and maintenance events make the product feel alive immediately."
+      }
+    },
+    "finalCta": {
+      "kicker": "Start the walkthrough",
+      "title": "Open the workspace and explore the fleet demo.",
+      "subtitle": "Use the secure sign-in flow to move from the product presentation into dashboards, company pages and vehicle operations."
+    }
+  },
   "dashboard": {
     "kicker": "Fleet command center",
     "title": "Run your vehicle operations with live visibility and enterprise control.",
@@ -146,6 +248,17 @@
     "recentKicker": "Recent fleet changes",
     "recentTitle": "Recently updated vehicles",
     "recentSubtitle": "Quick access to the latest records touched across the workspace.",
+    "companiesKicker": "Company ownership",
+    "companiesTitle": "Fleet distribution by company",
+    "companiesSubtitle": "Make it obvious which company currently owns each vehicle and how the fleet is split across the workspace.",
+    "openCompanies": "Open companies",
+    "companiesEmptyTitle": "No company distribution available",
+    "companiesEmptyDescription": "Create or import vehicles to populate the multi-company overview.",
+    "companyOwnership": "{{count}} vehicles currently assigned",
+    "companyVehicles": "Vehicles",
+    "companyMileage": "Total mileage",
+    "companyAverageMileage": "Average mileage",
+    "companyCost": "Projected cost",
     "recentActivityTitle": "Recent activity",
     "recentActivitySubtitle": "Keep an eye on the latest operational changes across vehicles, documents, support and approvals.",
     "alerts": {
@@ -1190,6 +1303,10 @@
       "RESET_TOKEN_INVALID_OR_EXPIRED": "This reset link is invalid or has expired.",
       "EMAIL_NOT_VERIFIED": "Verify your email address before signing in.",
       "EMAIL_VERIFICATION_TOKEN_INVALID_OR_EXPIRED": "This verification link is invalid or has expired.",
+      "COMPANY_NAME_ALREADY_EXISTS": "A workspace with this company name already exists.",
+      "LOGIN_RATE_LIMITED": "Too many sign-in attempts. Please try again shortly.",
+      "PASSWORD_RESET_RATE_LIMITED": "Too many password reset requests. Please try again shortly.",
+      "VERIFICATION_RATE_LIMITED": "Too many verification requests. Please try again shortly.",
       "APPROVAL_NOT_FOUND": "The approval request could not be found.",
       "APPROVAL_ALREADY_RESOLVED": "This approval request has already been resolved.",
       "UNSUPPORTED_FILE_TYPE": "This file type is not allowed.",

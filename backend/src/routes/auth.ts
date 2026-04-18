@@ -14,6 +14,7 @@ import {
   verifyEmailSchema,
 } from "../validation/schemas.js";
 import { AuthRequest, authenticate } from "../middleware/auth.js";
+import { createRateLimit } from "../middleware/rateLimit.js";
 import { validateBody } from "../middleware/validate.js";
 import { createSystemLogFromUnknown } from "../utils/systemLogs.js";
 import { ensureCompanySubscription } from "../services/billing.js";
@@ -32,6 +33,32 @@ import {
 import { sendTransactionalEmail } from "../services/email.js";
 
 const router = Router();
+
+const getNormalizedEmail = (value: unknown) => String(value ?? "").trim().toLowerCase();
+
+const loginRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  code: "LOGIN_RATE_LIMITED",
+  message: "Too many sign-in attempts. Please try again shortly.",
+  keyGenerator: (req) => `${req.method}:${req.path}:${req.ip}:${getNormalizedEmail(req.body?.email)}`,
+});
+
+const passwordResetRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  code: "PASSWORD_RESET_RATE_LIMITED",
+  message: "Too many password reset requests. Please try again shortly.",
+  keyGenerator: (req) => `${req.method}:${req.path}:${req.ip}:${getNormalizedEmail(req.body?.email)}`,
+});
+
+const verificationRateLimit = createRateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 6,
+  code: "VERIFICATION_RATE_LIMITED",
+  message: "Too many verification requests. Please try again shortly.",
+  keyGenerator: (req) => `${req.method}:${req.path}:${req.ip}:${getNormalizedEmail(req.body?.email)}`,
+});
 
 type DbClient = typeof prisma | Prisma.TransactionClient;
 
@@ -378,36 +405,38 @@ router.post("/register", validateBody(registerSchema), async (req, res: Response
       });
     }
 
-    const company =
-      registrationType === "COMPANY"
-        ? await prisma.company.upsert({
-            where: { name: companyName.trim() },
-            update: {},
-            create: { name: companyName.trim() },
-          })
-        : await prisma.company.create({
-            data: {
-              name: buildPersonalWorkspaceName(email),
-            },
-          });
-
-    await ensureCompanySubscription(prisma, company.id, company.name);
-
-    const companyUserCount = await prisma.user.count({
-      where: {
-        companyId: company.id,
-        deletedAt: null,
-      },
-    });
-
     const hashedPassword = await bcrypt.hash(password, 10);
     const created = await prisma.$transaction(async (tx) => {
+      const workspaceName =
+        registrationType === "COMPANY" ? companyName.trim() : buildPersonalWorkspaceName(email);
+
+      if (registrationType === "COMPANY") {
+        const existingCompany = await tx.company.findUnique({
+          where: { name: workspaceName },
+          select: { id: true },
+        });
+
+        if (existingCompany) {
+          return {
+            conflict: true as const,
+          };
+        }
+      }
+
+      const company = await tx.company.create({
+        data: {
+          name: workspaceName,
+        },
+      });
+
+      await ensureCompanySubscription(tx, company.id, company.name);
+
       const user = await tx.user.create({
         data: {
           email,
           password: hashedPassword,
           companyId: company.id,
-          role: registrationType === "COMPANY" && companyUserCount === 0 ? "ADMIN" : "MANAGER",
+          role: "MANAGER",
           isPlatformAdmin: false,
           registrationType,
         },
@@ -430,8 +459,15 @@ router.post("/register", validateBody(registerSchema), async (req, res: Response
       });
 
       const verification = await createEmailVerificationTokenRecord(tx, user.id);
-      return { user, verification };
+      return { user, verification, conflict: false as const };
     });
+
+    if (created.conflict) {
+      return res.status(409).json({
+        code: "COMPANY_NAME_ALREADY_EXISTS",
+        message: "A workspace with this company name already exists",
+      });
+    }
 
     await deliverVerificationEmail(created.user, created.verification.token, "EMAIL_VERIFICATION_SENT");
 
@@ -443,7 +479,7 @@ router.post("/register", validateBody(registerSchema), async (req, res: Response
   }
 });
 
-router.post("/resend-verification", validateBody(resendVerificationSchema), async (req, res: Response, next: NextFunction) => {
+router.post("/resend-verification", verificationRateLimit, validateBody(resendVerificationSchema), async (req, res: Response, next: NextFunction) => {
   try {
     const user = await prisma.user.findUnique({
       where: { email: req.body.email },
@@ -553,7 +589,7 @@ router.post("/verify-email", validateBody(verifyEmailSchema), async (req, res: R
   }
 });
 
-router.post("/login", validateBody(loginSchema), async (req, res: Response, next: NextFunction) => {
+router.post("/login", loginRateLimit, validateBody(loginSchema), async (req, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({
@@ -651,7 +687,7 @@ router.post("/login", validateBody(loginSchema), async (req, res: Response, next
   }
 });
 
-router.post("/forgot-password", validateBody(forgotPasswordSchema), async (req, res: Response, next: NextFunction) => {
+router.post("/forgot-password", passwordResetRateLimit, validateBody(forgotPasswordSchema), async (req, res: Response, next: NextFunction) => {
   try {
     const email = req.body.email;
     const existingUser = await prisma.user.findUnique({
