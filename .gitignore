@@ -1,0 +1,9 @@
+node_modules
+dist
+.env
+*.log
+.DS_Store
+coverage
+backend/test-uploads/
+backend/uploads/
+backend/storage/

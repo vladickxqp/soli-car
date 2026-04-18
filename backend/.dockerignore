@@ -1,0 +1,10 @@
+node_modules
+dist
+.env
+.env.local
+.env.development
+.env.production
+npm-debug.log
+Dockerfile*
+**/__pycache__
+!.env.example

@@ -1,0 +1,579 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id           String        @id @default(uuid())
+  name         String        @unique
+  users        User[]
+  vehicles     Vehicle[]
+  tickets      SupportTicket[]
+  subscription Subscription?
+  invitations  CompanyInvitation[]
+  approvals    ApprovalRequest[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model User {
+  id               String                @id @default(uuid())
+  email            String                @unique
+  password         String
+  role             Role                  @default(VIEWER)
+  isPlatformAdmin  Boolean               @default(false)
+  registrationType RegistrationType @default(COMPANY)
+  emailVerifiedAt  DateTime?
+  onboardingCompletedAt DateTime?
+  company          Company               @relation(fields: [companyId], references: [id])
+  companyId        String
+  histories        VehicleHistory[]
+  createdTickets   SupportTicket[]       @relation("TicketCreator")
+  ticketMessages   TicketMessage[]       @relation("TicketMessageSender")
+  systemLogs       SystemLog[]           @relation("SystemLogActor")
+  sentInvitations  CompanyInvitation[]   @relation("CompanyInvitationSender")
+  acceptedInvites  CompanyInvitation[]   @relation("CompanyInvitationAcceptor")
+  uploadedDocuments VehicleDocument[]    @relation("VehicleDocumentUploader")
+  createdMaintenanceRecords VehicleMaintenanceRecord[] @relation("MaintenanceCreatedBy")
+  updatedMaintenanceRecords VehicleMaintenanceRecord[] @relation("MaintenanceUpdatedBy")
+  passwordResetTokens PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
+  sessions           UserSession[]
+  requestedApprovals ApprovalRequest[]   @relation("ApprovalRequestedBy")
+  reviewedApprovals  ApprovalRequest[]   @relation("ApprovalReviewedBy")
+  notifications      AppNotification[]
+  publicVehicleShareLinks VehiclePublicShareLink[] @relation("VehiclePublicShareLinkCreator")
+  deletedAt        DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([companyId, deletedAt])
+  @@index([role, deletedAt])
+  @@index([isPlatformAdmin, deletedAt])
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  VIEWER
+  USER
+}
+
+model Vehicle {
+  id                String                  @id @default(uuid())
+  company            Company                 @relation(fields: [companyId], references: [id])
+  companyId          String
+  model              String
+  firstRegistration DateTime
+  vin               String                  @unique
+  hsn               String
+  tsn               String
+  price             Float
+  tuvDate           DateTime
+  tireStorage       String
+  plate             String
+  lastUpdate        DateTime
+  driver            String
+  contractType      String
+  contractValue     Float
+  interest          Float
+  contractStart     DateTime
+  contractEnd       DateTime
+  leasingPartner    String
+  customerNumber    String
+  inventoryNumber   String
+  contractPartner   String
+  billingFrom       DateTime
+  leasingRate       Float
+  billedTo          DateTime
+  insurancePartner  String
+  insuranceNumber   String
+  insuranceCost     Float
+  insuranceStart    DateTime
+  insuranceEnd      DateTime
+  mileage           Int
+  yearlyMileage     Int
+  taxPerYear        Float
+  paymentDate       DateTime
+  status            VehicleStatus           @default(ACTIVE)
+  hadPreviousAccidents Boolean     @default(false)
+  damageStatus      VehicleDamageStatus     @default(NONE)
+  damageNotes       String?
+  imageUrl          String?
+  latitude          Float?
+  longitude         Float?
+  lastLocationUpdate DateTime?
+  archivedAt        DateTime?
+  archivedByUserId  String?
+  archiveReason     String?
+  deletedAt         DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  histories         VehicleHistory[]
+  incidents         VehicleIncident[]
+  documents         VehicleDocument[]
+  maintenanceRecords VehicleMaintenanceRecord[]
+  publicShareLinks  VehiclePublicShareLink[]
+  tickets           SupportTicket[]
+
+  @@index([companyId])
+  @@index([companyId, deletedAt])
+  @@index([companyId, archivedAt])
+  @@index([companyId, status])
+  @@index([companyId, damageStatus])
+  @@index([companyId, updatedAt])
+  @@index([companyId, contractEnd])
+  @@index([companyId, insuranceEnd])
+  @@index([companyId, tuvDate])
+  @@index([companyId, lastLocationUpdate])
+  @@index([vin])
+  @@index([plate])
+  @@index([model])
+  @@index([driver])
+}
+
+model Subscription {
+  id                   String             @id @default(uuid())
+  company              Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId            String             @unique
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 SubscriptionPlan   @default(FREE)
+  status               SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([plan, status])
+}
+
+model VehicleHistory {
+  id         String   @id @default(uuid())
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId  String
+  actionType ActionType
+  changedBy  User     @relation(fields: [changedById], references: [id])
+  changedById String
+  oldData    Json?
+  newData    Json?
+  timestamp  DateTime @default(now())
+}
+
+model SupportTicket {
+  id        String         @id @default(uuid())
+  user      User?          @relation("TicketCreator", fields: [userId], references: [id], onDelete: SetNull)
+  userId    String?
+  company   Company        @relation(fields: [companyId], references: [id])
+  companyId String
+  vehicle   Vehicle?       @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  vehicleId String?
+  vehicleIncident VehicleIncident? @relation(fields: [vehicleIncidentId], references: [id], onDelete: SetNull)
+  vehicleIncidentId String?
+  category  TicketCategory
+  status    TicketStatus   @default(OPEN)
+  priority  TicketPriority @default(MEDIUM)
+  messages  TicketMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([companyId, status])
+  @@index([companyId, priority])
+  @@index([userId])
+  @@index([vehicleId])
+  @@index([vehicleIncidentId])
+  @@index([createdAt])
+}
+
+model VehicleIncident {
+  id            String                @id @default(uuid())
+  vehicle        Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId      String
+  title          String
+  description    String
+  status         VehicleIncidentStatus @default(UNRESOLVED)
+  occurredAt     DateTime
+  repairedAt     DateTime?
+  repairNotes    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  tickets        SupportTicket[]
+  attachments    VehicleDocument[]
+
+  @@index([vehicleId, status])
+  @@index([vehicleId, occurredAt])
+}
+
+model CompanyInvitation {
+  id          String            @id @default(uuid())
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId    String
+  inviter      User?             @relation("CompanyInvitationSender", fields: [invitedById], references: [id], onDelete: SetNull)
+  invitedById  String?
+  acceptedBy   User?             @relation("CompanyInvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+  acceptedById String?
+  email        String
+  role         Role              @default(VIEWER)
+  status       InvitationStatus  @default(PENDING)
+  tokenHash    String            @unique
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  revokedAt    DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([companyId, status])
+  @@index([email, status])
+}
+
+model VehicleDocument {
+  id           String              @id @default(uuid())
+  vehicle      Vehicle             @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId    String
+  incident     VehicleIncident?    @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  incidentId   String?
+  uploadedBy   User?               @relation("VehicleDocumentUploader", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedById String?
+  title        String
+  documentType VehicleDocumentType @default(OTHER)
+  originalName String
+  storagePath  String
+  mimeType     String
+  sizeBytes    Int
+  expiryDate   DateTime?
+  archivedAt   DateTime?
+  archivedByUserId String?
+  archiveReason String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([vehicleId, documentType])
+  @@index([vehicleId, incidentId])
+  @@index([expiryDate])
+  @@index([vehicleId, archivedAt])
+}
+
+model VehicleMaintenanceRecord {
+  id          String            @id @default(uuid())
+  vehicle      Vehicle           @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId    String
+  createdBy    User?             @relation("MaintenanceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById  String?
+  updatedBy    User?             @relation("MaintenanceUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedById  String?
+  title        String
+  description  String?
+  status       MaintenanceStatus @default(SCHEDULED)
+  serviceDate  DateTime?
+  completedAt  DateTime?
+  cost         Float?
+  vendor       String?
+  mileage      Int?
+  reminderDate DateTime?
+  archivedAt   DateTime?
+  archivedByUserId String?
+  archiveReason String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([vehicleId, status])
+  @@index([vehicleId, reminderDate])
+  @@index([vehicleId, serviceDate])
+  @@index([vehicleId, archivedAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+  @@index([userId, usedAt])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+  @@index([userId, usedAt])
+}
+
+model UserSession {
+  id         String   @id @default(uuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  userAgent  String?
+  ipAddress  String?
+  lastSeenAt DateTime @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, revokedAt, createdAt])
+}
+
+model VehiclePublicShareLink {
+  id             String   @id @default(uuid())
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  vehicleId      String
+  createdBy      User?    @relation("VehiclePublicShareLinkCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdById    String?
+  tokenHash      String   @unique
+  label          String?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  accessCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([vehicleId, revokedAt])
+  @@index([createdById, createdAt])
+}
+
+model ApprovalRequest {
+  id            String           @id @default(uuid())
+  company       Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId     String?
+  requestedBy   User             @relation("ApprovalRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  requestedById String
+  reviewedBy    User?            @relation("ApprovalReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedById  String?
+  action        ApprovalAction
+  status        ApprovalStatus   @default(PENDING)
+  entityType    SystemEntityType
+  entityId      String?
+  payload       Json
+  reason        String?
+  reviewComment String?
+  reviewedAt    DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@index([companyId, status])
+  @@index([status, createdAt])
+  @@index([action, status])
+  @@index([requestedById, createdAt])
+  @@index([reviewedById, createdAt])
+}
+
+model TicketMessage {
+  id            String        @id @default(uuid())
+  ticket        SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId      String
+  sender        User?         @relation("TicketMessageSender", fields: [senderId], references: [id], onDelete: SetNull)
+  senderId      String?
+  message       String
+  attachmentUrl String?
+  timestamp     DateTime      @default(now())
+
+  @@index([ticketId, timestamp])
+  @@index([senderId])
+}
+
+model AppNotification {
+  id          String              @id @default(uuid())
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  companyId   String?
+  type        NotificationType
+  title       String
+  message     String
+  status      NotificationStatus  @default(UNREAD)
+  priority    NotificationPriority @default(MEDIUM)
+  entityType  SystemEntityType?
+  entityId    String?
+  link        String?
+  metadata    Json?
+  sourceKey   String?             @unique
+  readAt      DateTime?
+  archivedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([userId, status, createdAt])
+  @@index([userId, archivedAt])
+  @@index([companyId, createdAt])
+  @@index([type, priority])
+}
+
+model SystemLog {
+  id         String           @id @default(uuid())
+  user       User?            @relation("SystemLogActor", fields: [userId], references: [id], onDelete: SetNull)
+  userId     String?
+  companyId  String?
+  action     String
+  entityType SystemEntityType
+  entityId   String?
+  metadata   Json?
+  timestamp  DateTime         @default(now())
+
+  @@index([userId, timestamp])
+  @@index([companyId, timestamp])
+  @@index([entityType, timestamp])
+  @@index([entityId])
+  @@index([action])
+}
+
+enum ActionType {
+  CREATE
+  UPDATE
+  TRANSFER
+  DELETE
+  STATUS
+  INCIDENT
+  DOCUMENT
+  MAINTENANCE
+  ARCHIVE
+  RESTORE
+}
+
+enum VehicleStatus {
+  ACTIVE
+  IN_SERVICE
+  UNDER_REPAIR
+  TRANSFER_PENDING
+  ARCHIVED
+  INACTIVE
+  DISPOSED
+  DAMAGED
+  IN_LEASING
+  SOLD
+  MAINTENANCE
+  TRANSFERRED
+}
+
+enum VehicleDamageStatus {
+  NONE
+  REPORTED
+  UNDER_REPAIR
+  REPAIRED
+}
+
+enum VehicleIncidentStatus {
+  UNRESOLVED
+  REPAIRED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum TicketCategory {
+  TECHNICAL
+  BILLING
+  OTHER
+}
+
+enum SystemEntityType {
+  VEHICLE
+  USER
+  COMPANY
+  TICKET
+  INVITATION
+  DOCUMENT
+  MAINTENANCE
+  APPROVAL
+}
+
+enum NotificationType {
+  INVITATION
+  SUPPORT
+  REMINDER
+  APPROVAL
+  VEHICLE
+  INCIDENT
+  MAINTENANCE
+  DOCUMENT
+  SYSTEM
+}
+
+enum NotificationStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApprovalAction {
+  ADMIN_USER_CREATE
+  ADMIN_USER_UPDATE
+  ADMIN_USER_DELETE
+  ADMIN_USER_PASSWORD_RESET
+  ADMIN_COMPANY_DELETE
+  ADMIN_VEHICLE_TRANSFER
+  ADMIN_VEHICLE_DELETE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum VehicleDocumentType {
+  REGISTRATION
+  INSURANCE
+  CONTRACT
+  SERVICE
+  INCIDENT
+  PHOTO
+  OTHER
+}
+
+enum MaintenanceStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+}
+
+enum RegistrationType {
+  COMPANY
+  INDIVIDUAL
+}
