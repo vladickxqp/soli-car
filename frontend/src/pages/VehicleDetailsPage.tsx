@@ -534,15 +534,45 @@ const VehicleDetailsPage = () => {
   const activeMaintenanceRecords = vehicle.maintenanceRecords.filter((record) => !record.archivedAt);
   const archivedMaintenanceRecords = vehicle.maintenanceRecords.filter((record) => Boolean(record.archivedAt));
 
-  const summaryFields = [
+  const masterDataFields = [
     [t("vehicle.company"), vehicle.company?.name ?? "-"],
+    [t("vehicle.plate"), vehicle.plate],
     [t("vehicle.vin"), vehicle.vin],
     [t("vehicle.driver"), vehicle.driver || "-"],
+    [t("vehicle.firstRegistration"), formatDate(vehicle.firstRegistration)],
+    [t("vehicle.lastUpdate"), formatDate(vehicle.lastUpdate)],
+    [t("vehicle.hsn"), vehicle.hsn],
+    [t("vehicle.tsn"), vehicle.tsn],
+    [t("vehicle.inventoryNumber"), vehicle.inventoryNumber || "-"],
+    [t("vehicle.customerNumber"), vehicle.customerNumber || "-"],
+    [t("vehicle.tireStorage"), vehicle.tireStorage || "-"],
+    [t("vehicle.price"), formatCurrency(vehicle.price)],
+  ];
+
+  const contractFields = [
+    [t("vehicle.contractType"), vehicle.contractType || "-"],
+    [t("vehicle.contractValue"), formatCurrency(vehicle.contractValue)],
+    [t("vehicle.leasingRate"), formatCurrency(vehicle.leasingRate)],
+    [t("vehicle.interest"), `${formatNumber(vehicle.interest)}%`],
+    [t("vehicle.contractStart"), formatDate(vehicle.contractStart)],
+    [t("vehicle.contractEnd"), formatDate(vehicle.contractEnd)],
+    [t("vehicle.leasingPartner"), vehicle.leasingPartner || "-"],
+    [t("vehicle.contractPartner"), vehicle.contractPartner || "-"],
+    [t("vehicle.billingFrom"), formatDate(vehicle.billingFrom)],
+    [t("vehicle.billedTo"), formatDate(vehicle.billedTo)],
+  ];
+
+  const insuranceFields = [
+    [t("vehicle.insurancePartner"), vehicle.insurancePartner || "-"],
+    [t("vehicle.insuranceNumber"), vehicle.insuranceNumber || "-"],
+    [t("vehicle.insuranceCost"), formatCurrency(vehicle.insuranceCost)],
+    [t("vehicle.insuranceStart"), formatDate(vehicle.insuranceStart)],
+    [t("vehicle.insuranceEnd"), formatDate(vehicle.insuranceEnd)],
+    [t("vehicle.tuvDate"), formatDate(vehicle.tuvDate)],
     [t("vehicle.mileage"), t("units.kilometers", { value: formatNumber(vehicle.mileage) })],
     [t("vehicle.yearlyMileage"), t("units.kilometers", { value: formatNumber(vehicle.yearlyMileage) })],
-    [t("vehicle.contractEnd"), formatDate(vehicle.contractEnd)],
-    [t("vehicle.insuranceEnd"), formatDate(vehicle.insuranceEnd)],
-    [t("vehicle.price"), formatCurrency(vehicle.price)],
+    [t("vehicle.taxPerYear"), formatCurrency(vehicle.taxPerYear)],
+    [t("vehicle.paymentDate"), formatDate(vehicle.paymentDate)],
   ];
 
   return (
@@ -679,14 +709,50 @@ const VehicleDetailsPage = () => {
                 )}
               </article>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                {summaryFields.map(([label, value]) => (
-                  <div key={label} className="shell-muted px-4 py-3">
-                    <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
-                    <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
-                  </div>
-                ))}
-              </div>
+              <article className="space-y-4">
+                <div>
+                  <p className="shell-kicker">{t("vehicleDetails.overviewKicker")}</p>
+                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.generalSection")}</h2>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {masterDataFields.map(([label, value]) => (
+                    <div key={`master-${label}`} className="shell-muted px-4 py-3">
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
+                      <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="space-y-4">
+                <div>
+                  <p className="shell-kicker">{t("vehicleDetails.contractKicker")}</p>
+                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.contractSection")}</h2>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {contractFields.map(([label, value]) => (
+                    <div key={`contract-${label}`} className="shell-muted px-4 py-3">
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
+                      <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              <article className="space-y-4">
+                <div>
+                  <p className="shell-kicker">{t("vehicleDetails.insuranceKicker")}</p>
+                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.insuranceSection")}</h2>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {insuranceFields.map(([label, value]) => (
+                    <div key={`insurance-${label}`} className="shell-muted px-4 py-3">
+                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
+                      <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
+                    </div>
+                  ))}
+                </div>
+              </article>
             </div>
           </section>
 
