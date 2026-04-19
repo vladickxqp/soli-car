@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { ApiError, authLogin, resendVerificationEmail } from "../api";
 import { getErrorMessage } from "../errors";
 import { useAuthStore } from "../store";
+import { storeVerificationPreview } from "../verificationPreview";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -42,8 +43,10 @@ const LoginPage = () => {
 
     setResending(true);
     try {
-      await resendVerificationEmail({ email: pendingVerificationEmail });
+      const data = await resendVerificationEmail({ email: pendingVerificationEmail });
+      storeVerificationPreview(pendingVerificationEmail, data.previewUrl);
       toast.success(t("auth.verify.resent"));
+      navigate(`/verify-email?email=${encodeURIComponent(pendingVerificationEmail)}`);
     } catch (error) {
       toast.error(getErrorMessage(error, t));
     } finally {

@@ -30,7 +30,7 @@ import {
   getEmailVerificationExpiry,
   hashEmailVerificationToken,
 } from "../utils/emailVerification.js";
-import { sendTransactionalEmail } from "../services/email.js";
+import { getEmailDeliveryMode, sendTransactionalEmail } from "../services/email.js";
 
 const router = Router();
 
@@ -132,10 +132,17 @@ const authUserResponse = (user: AuthUserRecord, sessionId: string) => ({
   user: buildAuthUserPayload(user, sessionId),
 });
 
-const createVerificationRequiredResponse = (email: string) => ({
+type VerificationDeliveryResponse = {
+  deliveryMode: "smtp" | "log" | "failed";
+  previewUrl: string | null;
+};
+
+const createVerificationRequiredResponse = (email: string, delivery?: VerificationDeliveryResponse) => ({
   success: true,
   requiresEmailVerification: true,
   email,
+  deliveryMode: delivery?.deliveryMode ?? null,
+  previewUrl: delivery?.previewUrl ?? null,
 });
 
 const createUserSession = async (db: DbClient, userId: string, req: { ip?: string; get?: (name: string) => string | undefined }) => {
@@ -219,6 +226,11 @@ const deliverVerificationEmail = async (
       deliveryMode,
     },
   });
+
+  return {
+    deliveryMode,
+    previewUrl: deliveryMode === "log" ? verificationUrl : null,
+  } satisfies VerificationDeliveryResponse;
 };
 
 router.post("/register", validateBody(registerSchema), async (req, res: Response, next: NextFunction) => {
@@ -398,10 +410,10 @@ router.post("/register", validateBody(registerSchema), async (req, res: Response
         };
       });
 
-      await deliverVerificationEmail(created.user, created.verification.token, "EMAIL_VERIFICATION_SENT");
+      const delivery = await deliverVerificationEmail(created.user, created.verification.token, "EMAIL_VERIFICATION_SENT");
 
       return res.status(201).json({
-        data: createVerificationRequiredResponse(created.user.email),
+        data: createVerificationRequiredResponse(created.user.email, delivery),
       });
     }
 
@@ -469,10 +481,10 @@ router.post("/register", validateBody(registerSchema), async (req, res: Response
       });
     }
 
-    await deliverVerificationEmail(created.user, created.verification.token, "EMAIL_VERIFICATION_SENT");
+    const delivery = await deliverVerificationEmail(created.user, created.verification.token, "EMAIL_VERIFICATION_SENT");
 
     res.status(201).json({
-      data: createVerificationRequiredResponse(created.user.email),
+      data: createVerificationRequiredResponse(created.user.email, delivery),
     });
   } catch (error) {
     next(error);
@@ -489,14 +501,21 @@ router.post("/resend-verification", verificationRateLimit, validateBody(resendVe
       },
     });
 
+    let delivery: VerificationDeliveryResponse = {
+      deliveryMode: getEmailDeliveryMode(),
+      previewUrl: getEmailDeliveryMode() === "log" ? buildVerificationUrl(generateEmailVerificationToken()) : null,
+    };
+
     if (user && !user.deletedAt && !user.emailVerifiedAt) {
       const verification = await prisma.$transaction(async (tx) => createEmailVerificationTokenRecord(tx, user.id));
-      await deliverVerificationEmail(user, verification.token, "EMAIL_VERIFICATION_RESENT");
+      delivery = await deliverVerificationEmail(user, verification.token, "EMAIL_VERIFICATION_RESENT");
     }
 
     res.json({
       data: {
         success: true,
+        deliveryMode: delivery.deliveryMode,
+        previewUrl: delivery.previewUrl,
       },
     });
   } catch (error) {

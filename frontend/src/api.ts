@@ -24,6 +24,7 @@ import {
   SupportTicket,
   SystemLogEntry,
   UserSessionRecord,
+  VerificationDeliveryResponse,
   Vehicle,
   VehicleDocument,
   VehicleHistory,
@@ -131,7 +132,7 @@ export const requestPasswordReset = (payload: { email: string }) =>
   });
 
 export const resendVerificationEmail = (payload: { email: string }) =>
-  requestData<{ success: true }>("/auth/resend-verification", {
+  requestData<VerificationDeliveryResponse>("/auth/resend-verification", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

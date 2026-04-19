@@ -109,6 +109,12 @@
         "pending": "Pending verification",
         "verifying": "Checking link",
         "verified": "Verified"
+      },
+      "demo": {
+        "kicker": "Local demo mode",
+        "title": "Open the verification link directly",
+        "description": "SMTP is not configured in this environment yet, so Soli Car generated a secure preview link for this account. Use it to complete email verification without opening container logs.",
+        "action": "Open verification link"
       }
     }
   },

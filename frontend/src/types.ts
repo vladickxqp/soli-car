@@ -63,6 +63,14 @@ export interface VerificationRequiredResponse {
   success: true;
   requiresEmailVerification: true;
   email: string;
+  deliveryMode?: "smtp" | "log" | "failed" | null;
+  previewUrl?: string | null;
+}
+
+export interface VerificationDeliveryResponse {
+  success: true;
+  deliveryMode?: "smtp" | "log" | "failed" | null;
+  previewUrl?: string | null;
 }
 
 export interface UserSessionRecord {

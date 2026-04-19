@@ -57,11 +57,13 @@ describe("auth routes", () => {
     });
 
     expect(response.status).toBe(201);
-    expect(response.body.data).toEqual({
+    expect(response.body.data).toMatchObject({
       success: true,
       requiresEmailVerification: true,
       email: "admin@acme.test",
+      deliveryMode: "log",
     });
+    expect(response.body.data.previewUrl).toEqual(expect.stringContaining("/verify-email?token="));
     expect(prismaMock.user.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
@@ -215,7 +217,11 @@ describe("auth routes", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(response.body.data).toEqual({ success: true });
+    expect(response.body.data).toMatchObject({
+      success: true,
+      deliveryMode: "log",
+    });
+    expect(response.body.data.previewUrl).toEqual(expect.stringContaining("/verify-email?token="));
     expect(prismaMock.emailVerificationToken.create).toHaveBeenCalled();
   });
 

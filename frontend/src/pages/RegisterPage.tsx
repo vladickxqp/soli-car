@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { authRegister, fetchInvitationPreview } from "../api";
 import { getErrorMessage } from "../errors";
 import { InvitationPreview, RegistrationType } from "../types";
+import { storeVerificationPreview } from "../verificationPreview";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -66,6 +67,7 @@ const RegisterPage = () => {
         companyName: registrationType === "COMPANY" ? companyName : undefined,
         invitationToken: invitationToken || undefined,
       });
+      storeVerificationPreview(data.email, data.previewUrl);
       toast.success(t("auth.registerSuccess"));
       navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
     } catch (error) {

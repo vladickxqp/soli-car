@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { ApiError, resendVerificationEmail, verifyEmailToken } from "../api";
 import { getErrorMessage } from "../errors";
 import { useAuthStore } from "../store";
+import { clearVerificationPreview, readVerificationPreview, storeVerificationPreview } from "../verificationPreview";
 
 const VerifyEmailPage = () => {
   const navigate = useNavigate();
@@ -19,6 +20,16 @@ const VerifyEmailPage = () => {
   const [verificationComplete, setVerificationComplete] = useState(false);
   const [error, setError] = useState("");
   const [expiredToken, setExpiredToken] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState("");
+
+  useEffect(() => {
+    if (!email) {
+      setPreviewUrl("");
+      return;
+    }
+
+    setPreviewUrl(readVerificationPreview(email) ?? "");
+  }, [email]);
 
   useEffect(() => {
     if (!token) {
@@ -36,6 +47,7 @@ const VerifyEmailPage = () => {
 
         setAuth(data.token, data.user);
         setVerificationComplete(true);
+        clearVerificationPreview(data.user.email);
         toast.success(t("auth.verify.success"));
         navigate("/onboarding", { replace: true });
       })
@@ -64,7 +76,9 @@ const VerifyEmailPage = () => {
 
     setResending(true);
     try {
-      await resendVerificationEmail({ email });
+      const data = await resendVerificationEmail({ email });
+      storeVerificationPreview(email, data.previewUrl);
+      setPreviewUrl(data.previewUrl ?? readVerificationPreview(email) ?? "");
       toast.success(t("auth.verify.resent"));
       setError("");
     } catch (resendError) {
@@ -133,6 +147,17 @@ const VerifyEmailPage = () => {
               {resending ? t("common.loading") : t("auth.verify.resendAction")}
             </button>
           </form>
+        ) : null}
+
+        {previewUrl && !verificationComplete ? (
+          <div className="mt-6 rounded-[28px] border border-teal-200 bg-teal-50 p-5 text-left">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-teal-600">{t("auth.verify.demo.kicker")}</p>
+            <h2 className="mt-2 text-lg font-semibold text-slate-950">{t("auth.verify.demo.title")}</h2>
+            <p className="mt-2 text-sm leading-7 text-slate-600">{t("auth.verify.demo.description")}</p>
+            <a href={previewUrl} className="app-btn-primary mt-4 inline-flex">
+              {t("auth.verify.demo.action")}
+            </a>
+          </div>
         ) : null}
 
         <div className="mt-8 flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
