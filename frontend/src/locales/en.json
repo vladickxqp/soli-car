@@ -140,17 +140,18 @@
     },
     "cta": {
       "login": "Login",
-      "register": "Register"
+      "register": "Register",
+      "demo": "Open demo"
     },
     "stats": {
       "companies": {
         "label": "Company structure",
-        "value": "8 companies",
+        "value": "6 companies",
         "description": "Separate fleet ownership, users and analytics by company scope."
       },
       "vehicles": {
         "label": "Operational fleet",
-        "value": "20+ vehicles",
+        "value": "12+ vehicles",
         "description": "Show active, transferred, archived and service-bound records in one product."
       },
       "activity": {
@@ -586,6 +587,10 @@
     "archivedTitle": "This vehicle is archived",
     "archivedDescription": "Archived records stay searchable and keep history, documents, incidents and maintenance intact, but active actions are paused until the vehicle is restored.",
     "archivedAt": "Archived {{date}}",
+    "currentCompanyTitle": "Current company owner",
+    "previousCompaniesTitle": "Previous companies",
+    "transferTimelineTitle": "Transfer timeline",
+    "transferHistoryEmpty": "No transfer history recorded yet.",
     "tabs": {
       "overview": "Overview",
       "history": "History",

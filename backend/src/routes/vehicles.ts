@@ -571,10 +571,10 @@ const hasIncidentChanged = (
 const ensureTargetCompany = async (companyId: string) => {
   const company = await prisma.company.findUnique({
     where: { id: companyId },
-    select: { id: true },
+    select: { id: true, name: true },
   });
 
-  return Boolean(company);
+  return company;
 };
 
 const shouldNotifySoon = (value?: Date | null) =>
@@ -2321,7 +2321,9 @@ router.post("/", authenticate, requireManagerOrAdmin, validateBody(vehicleSchema
     const companyId =
       req.user!.isPlatformAdmin && req.body.companyId ? req.body.companyId : req.user!.companyId;
 
-    if (!(await ensureTargetCompany(companyId))) {
+    const companyRecord = await ensureTargetCompany(companyId);
+
+    if (!companyRecord) {
       return res.status(400).json({
         code: "COMPANY_NOT_FOUND",
         message: "Company not found",
@@ -2577,7 +2579,9 @@ router.post("/:id/transfer", authenticate, requirePlatformAdmin, validateBody(tr
       });
     }
 
-    if (!(await ensureTargetCompany(req.body.companyId))) {
+    const targetCompany = await ensureTargetCompany(req.body.companyId);
+
+    if (!targetCompany) {
       return res.status(400).json({
         code: "TARGET_COMPANY_NOT_FOUND",
         message: "Target company not found",
@@ -2590,6 +2594,11 @@ router.post("/:id/transfer", authenticate, requirePlatformAdmin, validateBody(tr
         message: "Vehicle is already assigned to that company",
       });
     }
+
+    const sourceCompany = await prisma.company.findUnique({
+      where: { id: existing.companyId },
+      select: { id: true, name: true },
+    });
 
     await assertVehicleCapacity(prisma, req.body.companyId);
 
@@ -2611,10 +2620,12 @@ router.post("/:id/transfer", authenticate, requirePlatformAdmin, validateBody(tr
         req.user!.id,
         toHistoryJson({
           companyId: existing.companyId,
+          companyName: sourceCompany?.name ?? existing.companyId,
           status: existing.status,
         }),
         toHistoryJson({
           companyId: req.body.companyId,
+          companyName: targetCompany.name,
           status: "TRANSFERRED",
         }),
       );

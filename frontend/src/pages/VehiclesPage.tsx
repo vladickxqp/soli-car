@@ -692,6 +692,9 @@ const VehiclesPage = () => {
                       <p className="text-sm font-semibold text-slate-900">{vehicle.model}</p>
                       <p className="mt-1 text-xs text-slate-500">{t("vehicle.vin")} {vehicle.vin}</p>
                       <div className="mt-2 flex flex-wrap gap-2">
+                        <span className="inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-700">
+                          {vehicle.company?.name ?? "-"}
+                        </span>
                         {vehicle.archivedAt || vehicle.deletedAt ? <StatusBadge label={t("vehicles.archivedBadge")} tone="slate" /> : null}
                         <StatusBadge label={t(`damageStatus.${vehicle.damageStatus}`)} tone={getDamageTone(vehicle.damageStatus)} />
                         {vehicle.hadPreviousAccidents ? (
@@ -701,7 +704,14 @@ const VehiclesPage = () => {
                       {vehicle.archiveReason ? <p className="mt-2 text-xs text-slate-500">{vehicle.archiveReason}</p> : null}
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600">{vehicle.plate}</td>
-                    <td className="px-5 py-4 text-sm text-slate-600">{vehicle.company?.name ?? "-"}</td>
+                    <td className="px-5 py-4">
+                      <div className="inline-flex rounded-2xl bg-slate-50 px-3 py-2 shadow-sm">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("vehicle.company")}</p>
+                          <p className="mt-1 text-sm font-medium text-slate-900">{vehicle.company?.name ?? "-"}</p>
+                        </div>
+                      </div>
+                    </td>
                     <td className="px-5 py-4"><StatusBadge status={vehicle.status} /></td>
                     <td className="px-5 py-4 text-sm text-slate-600">
                       {t("units.kilometers", { value: formatNumber(vehicle.mileage) })}
@@ -745,6 +755,9 @@ const VehiclesPage = () => {
                   <div>
                     <p className="text-lg font-semibold text-slate-950">{vehicle.model}</p>
                     <p className="mt-1 text-sm text-slate-500">{vehicle.plate}</p>
+                    <div className="mt-3 inline-flex items-center rounded-full bg-sky-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-700">
+                      {vehicle.company?.name ?? "-"}
+                    </div>
                     {vehicle.archiveReason ? <p className="mt-2 text-xs text-slate-500">{vehicle.archiveReason}</p> : null}
                   </div>
 

@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import {
   createCompanyInvitation,
+  fetchAdvancedAnalytics,
   fetchCompanies,
   fetchCompanyWorkspaceDetail,
   revokeCompanyInvitation,
@@ -11,10 +12,10 @@ import EmptyState from "../components/EmptyState";
 import LoadingCard from "../components/LoadingCard";
 import StatusBadge from "../components/StatusBadge";
 import { getErrorMessage } from "../errors";
-import { formatDate, formatDateTime } from "../formatters";
+import { formatCurrency, formatDate, formatDateTime, formatNumber } from "../formatters";
 import { canManageCompanies } from "../permissions";
 import { useAuthStore } from "../store";
-import { Company, CompanyWorkspaceDetail, UserRole } from "../types";
+import { AdvancedAnalytics, Company, CompanyWorkspaceDetail, UserRole } from "../types";
 
 const INVITABLE_ROLES: UserRole[] = ["MANAGER", "VIEWER", "ADMIN"];
 
@@ -26,6 +27,7 @@ const CompaniesPage = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [workspaceDetail, setWorkspaceDetail] = useState<CompanyWorkspaceDetail | null>(null);
+  const [companyAnalytics, setCompanyAnalytics] = useState<AdvancedAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [savingInvitation, setSavingInvitation] = useState(false);
@@ -40,6 +42,23 @@ const CompaniesPage = () => {
     () => companies.find((company) => company.id === selectedCompanyId) ?? null,
     [companies, selectedCompanyId],
   );
+  const companyBreakdown = companyAnalytics?.vehiclesPerCompany ?? [];
+  const totalFleetVehicles = companyAnalytics?.summary.totalVehicles ?? 0;
+  const companyAnalyticsById = useMemo(
+    () => new Map(companyBreakdown.map((item) => [item.companyId, item])),
+    [companyBreakdown],
+  );
+  const selectedCompanyMetrics = selectedCompany ? companyAnalyticsById.get(selectedCompany.id) ?? null : null;
+  const selectedCompanyIncidents =
+    workspaceDetail?.vehicles.reduce((sum, vehicle) => sum + (vehicle.incidentCount ?? 0), 0) ?? 0;
+  const selectedCompanyArchivedVehicles =
+    workspaceDetail?.vehicles.filter(
+      (vehicle) => Boolean(vehicle.archivedAt || vehicle.deletedAt || vehicle.status === "ARCHIVED"),
+    ).length ?? 0;
+  const selectedCompanyShare =
+    selectedCompanyMetrics && totalFleetVehicles > 0
+      ? Math.round((selectedCompanyMetrics.vehicleCount / totalFleetVehicles) * 100)
+      : 0;
 
   const loadWorkspaceDetail = async (companyId: string) => {
     if (!token) {
@@ -66,13 +85,14 @@ const CompaniesPage = () => {
     let cancelled = false;
     setLoading(true);
 
-    fetchCompanies(token)
-      .then((companyData) => {
+    Promise.all([fetchCompanies(token), fetchAdvancedAnalytics(token)])
+      .then(([companyData, analytics]) => {
         if (cancelled) {
           return;
         }
 
         setCompanies(companyData);
+        setCompanyAnalytics(analytics);
         const nextCompanyId = companyData[0]?.id ?? "";
         setSelectedCompanyId(nextCompanyId);
         setError("");
@@ -178,7 +198,14 @@ const CompaniesPage = () => {
             <h1 className="shell-title mt-3">{t("companies.title")}</h1>
             <p className="shell-subtitle">{t("companies.subtitle")}</p>
           </div>
-          <div className="app-chip">{t("companies.count", { count: companies.length })}</div>
+          <div className="flex flex-wrap gap-2">
+            <div className="app-chip">{t("companies.count", { count: companies.length })}</div>
+            {companyAnalytics ? (
+              <div className="app-chip">
+                {t("dashboard.analytics.totalVehicles")}: {formatNumber(companyAnalytics.summary.totalVehicles)}
+              </div>
+            ) : null}
+          </div>
         </div>
       </section>
 
@@ -205,17 +232,45 @@ const CompaniesPage = () => {
             ) : (
               <div className="divide-y divide-slate-100">
                 {companies.map((company) => (
-                  <button
-                    key={company.id}
-                    type="button"
-                    onClick={() => handleSelectCompany(company.id)}
-                    className={`flex w-full flex-col gap-3 px-5 py-4 text-left transition hover:bg-slate-50 ${
-                      selectedCompanyId === company.id ? "bg-slate-50" : ""
-                    }`}
-                  >
-                    <p className="text-sm font-semibold text-slate-950">{company.name}</p>
-                    <p className="text-xs text-slate-500">{company.id}</p>
-                  </button>
+                  (() => {
+                    const companyMetrics = companyAnalyticsById.get(company.id);
+                    const vehicleCount = companyMetrics?.vehicleCount ?? 0;
+                    const companyShare =
+                      totalFleetVehicles > 0 ? Math.round((vehicleCount / totalFleetVehicles) * 100) : 0;
+
+                    return (
+                      <button
+                        key={company.id}
+                        type="button"
+                        onClick={() => handleSelectCompany(company.id)}
+                        className={`flex w-full flex-col gap-3 px-5 py-4 text-left transition hover:bg-slate-50 ${
+                          selectedCompanyId === company.id ? "bg-slate-50" : ""
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-950">{company.name}</p>
+                            <p className="mt-1 text-xs text-slate-500">{company.id}</p>
+                          </div>
+                          <div className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                            {formatNumber(vehicleCount)}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                            <span>{t("dashboard.companyVehicles")}</span>
+                            <span>{companyShare}%</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-slate-200">
+                            <div
+                              className="h-2 rounded-full bg-[linear-gradient(90deg,_#0f172a_0%,_#0f766e_100%)] transition-all"
+                              style={{ width: `${Math.max(companyShare, vehicleCount > 0 ? 10 : 0)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })()
                 ))}
               </div>
             )}
@@ -255,6 +310,10 @@ const CompaniesPage = () => {
                           <p className="mt-2 text-xl font-semibold text-slate-950">
                             {workspaceDetail.invitations.filter((invitation) => invitation.status === "PENDING").length}
                           </p>
+                        </div>
+                        <div className="shell-muted px-4 py-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("vehicle.incidentCount")}</p>
+                          <p className="mt-2 text-xl font-semibold text-slate-950">{formatNumber(selectedCompanyIncidents)}</p>
                         </div>
                       </div>
                     </div>
@@ -315,6 +374,58 @@ const CompaniesPage = () => {
                       </div>
 
                       <div className="space-y-6">
+                        <article className="shell-muted p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companiesKicker")}</p>
+                              <h3 className="mt-2 text-lg font-semibold text-slate-950">{selectedCompany?.name}</h3>
+                              <p className="mt-2 text-sm text-slate-500">
+                                {selectedCompanyMetrics
+                                  ? t("dashboard.companyOwnership", {
+                                      count: formatNumber(selectedCompanyMetrics.vehicleCount),
+                                    })
+                                  : t("companies.workspaceSubtitle")}
+                              </p>
+                            </div>
+                            <div className="app-chip">{selectedCompanyShare}%</div>
+                          </div>
+
+                          {selectedCompanyMetrics ? (
+                            <>
+                              <div className="mt-4 h-2 rounded-full bg-slate-200">
+                                <div
+                                  className="h-2 rounded-full bg-[linear-gradient(90deg,_#0f172a_0%,_#0f766e_100%)]"
+                                  style={{ width: `${Math.max(selectedCompanyShare, selectedCompanyMetrics.vehicleCount > 0 ? 10 : 0)}%` }}
+                                />
+                              </div>
+                              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-2xl bg-white px-4 py-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyMileage")}</p>
+                                  <p className="mt-2 text-sm font-medium text-slate-900">
+                                    {t("units.kilometers", { value: formatNumber(selectedCompanyMetrics.totalMileage) })}
+                                  </p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-4 py-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyAverageMileage")}</p>
+                                  <p className="mt-2 text-sm font-medium text-slate-900">
+                                    {t("units.kilometers", { value: formatNumber(selectedCompanyMetrics.averageMileage) })}
+                                  </p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-4 py-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyCost")}</p>
+                                  <p className="mt-2 text-sm font-medium text-slate-900">
+                                    {formatCurrency(selectedCompanyMetrics.totalLeasingCost + selectedCompanyMetrics.totalInsuranceCost)}
+                                  </p>
+                                </div>
+                                <div className="rounded-2xl bg-white px-4 py-3">
+                                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("vehicles.archivedBadge")}</p>
+                                  <p className="mt-2 text-sm font-medium text-slate-900">{formatNumber(selectedCompanyArchivedVehicles)}</p>
+                                </div>
+                              </div>
+                            </>
+                          ) : null}
+                        </article>
+
                         <article className="shell-muted p-4">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("companies.invites.createKicker")}</p>
                           <h3 className="mt-2 text-lg font-semibold text-slate-950">{t("companies.invites.createTitle")}</h3>
@@ -406,4 +517,3 @@ const CompaniesPage = () => {
 };
 
 export default CompaniesPage;
-

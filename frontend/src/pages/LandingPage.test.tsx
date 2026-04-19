@@ -19,6 +19,6 @@ describe("LandingPage", () => {
     expect(screen.getByText("Soli Car")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: /Fleet operations with clear ownership/i })).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: "Login" }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole("link", { name: "Register" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Open demo" }).length).toBeGreaterThan(0);
   });
 });

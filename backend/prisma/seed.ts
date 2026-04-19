@@ -203,13 +203,77 @@ async function main() {
     });
   }
 
-  await prisma.company.deleteMany({
+  const staleCompanies = await prisma.company.findMany({
     where: {
-      name: {
-        startsWith: "Demo Prospect ",
-      },
+      OR: [
+        { name: { startsWith: "Demo Prospect " } },
+        { name: { startsWith: "Smoke Fleet " } },
+        { name: { startsWith: "QA Admin Company " } },
+        { name: { startsWith: "Personal Workspace - " } },
+        { name: "Verification Check GmbH" },
+        { name: "Soli.car" },
+      ],
+    },
+    select: {
+      id: true,
     },
   });
+
+  if (staleCompanies.length > 0) {
+    const staleCompanyIds = staleCompanies.map((company) => company.id);
+    const staleVehicles = await prisma.vehicle.findMany({
+      where: {
+        companyId: {
+          in: staleCompanyIds,
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (staleVehicles.length > 0) {
+      await prisma.vehicleHistory.deleteMany({
+        where: {
+          vehicleId: {
+            in: staleVehicles.map((vehicle) => vehicle.id),
+          },
+        },
+      });
+    }
+
+    await prisma.supportTicket.deleteMany({
+      where: {
+        companyId: {
+          in: staleCompanyIds,
+        },
+      },
+    });
+
+    await prisma.vehicle.deleteMany({
+      where: {
+        companyId: {
+          in: staleCompanyIds,
+        },
+      },
+    });
+
+    await prisma.user.deleteMany({
+      where: {
+        companyId: {
+          in: staleCompanyIds,
+        },
+      },
+    });
+
+    await prisma.company.deleteMany({
+      where: {
+        id: {
+          in: staleCompanyIds,
+        },
+      },
+    });
+  }
 
   const adminCompany = await prisma.company.upsert({
     where: { name: "Soli Car HQ" },
@@ -1674,10 +1738,12 @@ async function main() {
       changedById: adminUser.id,
       oldData: {
         companyId: adminCompany.id,
+        companyName: adminCompany.name,
         status: "ACTIVE",
       },
       newData: {
         companyId: userCompany.id,
+        companyName: userCompany.name,
         status: "TRANSFERRED",
       },
       timestamp: addDays(-6),

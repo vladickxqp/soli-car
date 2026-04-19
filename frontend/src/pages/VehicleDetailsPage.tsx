@@ -91,6 +91,24 @@ const getMaintenanceTone = (status: MaintenanceStatus): "blue" | "green" | "yell
   }
 };
 
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+
+const readHistoryString = (value: Record<string, unknown> | null, keys: string[]) => {
+  if (!value) {
+    return null;
+  }
+
+  for (const key of keys) {
+    const current = value[key];
+    if (typeof current === "string" && current.trim().length > 0) {
+      return current;
+    }
+  }
+
+  return null;
+};
+
 const emptyMaintenance = {
   title: "",
   description: "",
@@ -470,6 +488,41 @@ const VehicleDetailsPage = () => {
       ? ([vehicle.status, ...EDITABLE_STATUS_OPTIONS] as VehicleStatus[])
       : EDITABLE_STATUS_OPTIONS;
   }, [vehicle]);
+  const transferEvents = useMemo(
+    () =>
+      history
+        .filter((entry) => entry.actionType === "TRANSFER")
+        .map((entry) => {
+          const oldData = asRecord(entry.oldData);
+          const newData = asRecord(entry.newData);
+
+          const fromCompany =
+            readHistoryString(oldData, ["companyName", "fromCompanyName", "companyId", "fromCompanyId"]) ?? "-";
+          const toCompany =
+            readHistoryString(newData, ["companyName", "toCompanyName", "companyId", "toCompanyId"]) ?? "-";
+
+          return {
+            id: entry.id,
+            timestamp: entry.timestamp,
+            fromCompany,
+            toCompany,
+            changedBy: entry.changedBy.email,
+          };
+        })
+        .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime()),
+    [history],
+  );
+  const previousCompanies = useMemo(() => {
+    const currentCompanyName = vehicle?.company?.name ?? "";
+    return Array.from(
+      new Set(
+        transferEvents
+          .flatMap((entry) => [entry.fromCompany, entry.toCompany])
+          .filter((companyName) => companyName && companyName !== "-" && companyName !== currentCompanyName),
+      ),
+    );
+  }, [transferEvents, vehicle?.company?.name]);
+  const latestTransfer = transferEvents[0] ?? null;
 
   if (loading) return <LoadingCard label={t("vehicleDetails.loading")} />;
   if (!vehicle) return <div className="rounded-[28px] border border-rose-200 bg-rose-50 px-6 py-6 text-sm text-rose-700">{error || t("vehicleDetails.notFound")}</div>;
@@ -560,13 +613,80 @@ const VehicleDetailsPage = () => {
       {activeTab === "overview" ? (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
           <section className="shell-panel p-5 sm:p-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              {summaryFields.map(([label, value]) => (
-                <div key={label} className="shell-muted px-4 py-3">
-                  <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
-                  <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
+            <div className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="shell-muted px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicle.company")}</p>
+                  <p className="mt-3 text-lg font-semibold text-slate-950">{vehicle.company?.name ?? "-"}</p>
+                  <p className="mt-2 text-xs text-slate-500">{t("vehicleDetails.currentCompanyTitle")}</p>
                 </div>
-              ))}
+                <div className="shell-muted px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.transferTimelineTitle")}</p>
+                  <p className="mt-3 text-lg font-semibold text-slate-950">{formatNumber(transferEvents.length)}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {latestTransfer ? formatDate(latestTransfer.timestamp) : t("vehicleDetails.transferHistoryEmpty")}
+                  </p>
+                </div>
+                <div className="shell-muted px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.previousCompaniesTitle")}</p>
+                  <p className="mt-3 text-lg font-semibold text-slate-950">{formatNumber(previousCompanies.length)}</p>
+                  <p className="mt-2 text-xs text-slate-500">
+                    {previousCompanies.length > 0 ? previousCompanies.slice(0, 2).join(" / ") : t("vehicleDetails.transferHistoryEmpty")}
+                  </p>
+                </div>
+              </div>
+
+              <article className="shell-muted px-4 py-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("vehicleDetails.transferTitle")}</p>
+                    <h2 className="mt-2 text-lg font-semibold text-slate-950">{t("vehicleDetails.transferTimelineTitle")}</h2>
+                    <p className="mt-2 text-sm text-slate-500">{t("vehicleDetails.transferSubtitle")}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <StatusBadge label={vehicle.company?.name ?? "-"} tone="blue" />
+                    {previousCompanies.slice(0, 2).map((companyName) => (
+                      <StatusBadge key={companyName} label={companyName} tone="slate" />
+                    ))}
+                  </div>
+                </div>
+
+                {transferEvents.length === 0 ? (
+                  <div className="mt-5">
+                    <EmptyState
+                      title={t("vehicleDetails.transferTimelineTitle")}
+                      description={t("vehicleDetails.transferHistoryEmpty")}
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-5 space-y-3">
+                    {transferEvents.map((entry) => (
+                      <div key={entry.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <p className="text-sm font-semibold text-slate-950">
+                              {entry.fromCompany} {"->"} {entry.toCompany}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {formatDate(entry.timestamp)} / {entry.changedBy}
+                            </p>
+                          </div>
+                          <StatusBadge label={entry.toCompany} tone="blue" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </article>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                {summaryFields.map(([label, value]) => (
+                  <div key={label} className="shell-muted px-4 py-3">
+                    <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
+                    <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 

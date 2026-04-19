@@ -49,6 +49,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isDateString = (value: string) => !Number.isNaN(Date.parse(value)) && value.includes("-");
 
 const getFieldLabel = (key: string, t: TFunction) => {
+  if (key === "companyName") {
+    return t("vehicle.company");
+  }
+
   if (SPECIAL_ENTITY_KEYS.has(key)) {
     const translatedSpecial = t(`history.labels.${key}`);
     return translatedSpecial === `history.labels.${key}` ? key : translatedSpecial;
@@ -186,6 +190,7 @@ export const getHistoryChangeRows = (entry: VehicleHistory, t: TFunction): Histo
 
   const keys = Array.from(new Set([...Object.keys(oldData), ...Object.keys(newData)]))
     .filter((key) => !IGNORED_KEYS.has(key))
+    .filter((key) => !(key === "companyId" && ("companyName" in oldData || "companyName" in newData)))
     .filter((key) => JSON.stringify(oldData[key]) !== JSON.stringify(newData[key]));
 
   return keys.slice(0, 14).map((key) => ({

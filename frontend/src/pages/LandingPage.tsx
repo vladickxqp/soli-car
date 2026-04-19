@@ -77,8 +77,8 @@ const LandingPage = () => {
           <Link to="/login" className="app-btn-secondary hidden sm:inline-flex">
             {t("landing.cta.login")}
           </Link>
-          <Link to="/register" className="app-btn-primary">
-            {t("landing.cta.register")}
+          <Link to="/login" className="app-btn-primary">
+            {t("landing.cta.demo")}
           </Link>
         </div>
       </header>
@@ -96,8 +96,8 @@ const LandingPage = () => {
               <Link to="/login" className="app-btn-primary">
                 {t("landing.cta.login")}
               </Link>
-              <Link to="/register" className="app-btn-secondary">
-                {t("landing.cta.register")}
+              <Link to="/login" className="app-btn-secondary">
+                {t("landing.cta.demo")}
               </Link>
             </div>
 
@@ -172,8 +172,8 @@ const LandingPage = () => {
               <Link to="/login" className="rounded-2xl bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100">
                 {t("landing.cta.login")}
               </Link>
-              <Link to="/register" className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15">
-                {t("landing.cta.register")}
+              <Link to="/login" className="rounded-2xl border border-white/15 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/15">
+                {t("landing.cta.demo")}
               </Link>
             </div>
           </div>

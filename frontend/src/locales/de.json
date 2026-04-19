@@ -140,17 +140,18 @@
     },
     "cta": {
       "login": "Login",
-      "register": "Registrieren"
+      "register": "Registrieren",
+      "demo": "Demo oeffnen"
     },
     "stats": {
       "companies": {
         "label": "Firmenstruktur",
-        "value": "8 Firmen",
+        "value": "6 Firmen",
         "description": "Trennen Sie Fuhrparkbesitz, Benutzer und Analysen sauber nach Firmenscope."
       },
       "vehicles": {
         "label": "Operative Flotte",
-        "value": "20+ Fahrzeuge",
+        "value": "12+ Fahrzeuge",
         "description": "Zeigen Sie aktive, uebertragene, archivierte und servicegebundene Datensaetze in einem Produkt."
       },
       "activity": {
@@ -673,7 +674,11 @@
     "restoreSuccess": "Fahrzeug erfolgreich wiederhergestellt.",
     "archivedTitle": "Dieses Fahrzeug ist archiviert",
     "archivedDescription": "Archivierte Datensaetze bleiben durchsuchbar und behalten Historie, Dokumente, Incidents und Wartung, aber aktive Aktionen sind pausiert, bis das Fahrzeug wiederhergestellt wird.",
-    "archivedAt": "Archiviert am {{date}}"
+    "archivedAt": "Archiviert am {{date}}",
+    "currentCompanyTitle": "Aktuelle Firmenzuordnung",
+    "previousCompaniesTitle": "Bisherige Firmen",
+    "transferTimelineTitle": "Transfer-Timeline",
+    "transferHistoryEmpty": "Noch keine Transferhistorie vorhanden."
   },
   "publicShare": {
     "kicker": "Shared vehicle snapshot",

@@ -89,6 +89,12 @@ const DashboardPage = () => {
   }, [analytics?.notifications]);
 
   const companyBreakdown = advancedAnalytics?.vehiclesPerCompany ?? [];
+  const totalCompanyVehicles = useMemo(
+    () => companyBreakdown.reduce((sum, company) => sum + company.vehicleCount, 0),
+    [companyBreakdown],
+  );
+  const averageVehiclesPerCompany =
+    companyBreakdown.length > 0 ? Math.round(totalCompanyVehicles / companyBreakdown.length) : 0;
 
   return (
     <div className="space-y-6">
@@ -234,8 +240,29 @@ const DashboardPage = () => {
                 />
               </div>
             ) : (
-              <div className="mt-5 grid gap-4 xl:grid-cols-2">
-                {companyBreakdown.slice(0, 6).map((company) => (
+              <div className="mt-5 space-y-4">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="shell-muted p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("companies.count", { count: companyBreakdown.length })}</p>
+                    <p className="mt-3 text-2xl font-semibold text-slate-950">{formatNumber(companyBreakdown.length)}</p>
+                  </div>
+                  <div className="shell-muted p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.analytics.totalVehicles")}</p>
+                    <p className="mt-3 text-2xl font-semibold text-slate-950">{formatNumber(totalCompanyVehicles)}</p>
+                  </div>
+                  <div className="shell-muted p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyVehicles")}</p>
+                    <p className="mt-3 text-2xl font-semibold text-slate-950">{formatNumber(averageVehiclesPerCompany)}</p>
+                    <p className="mt-2 text-xs text-slate-500">{t("dashboard.companyOwnership", { count: formatNumber(averageVehiclesPerCompany) })}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {companyBreakdown.slice(0, 6).map((company) => {
+                    const share =
+                      totalCompanyVehicles > 0 ? Math.round((company.vehicleCount / totalCompanyVehicles) * 100) : 0;
+
+                    return (
                   <article key={company.companyId} className="shell-muted p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
@@ -247,6 +274,19 @@ const DashboardPage = () => {
                       <div className="rounded-2xl bg-white px-3 py-2 text-right shadow-sm">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">{t("dashboard.companyVehicles")}</p>
                         <p className="mt-1 text-lg font-semibold text-slate-950">{formatNumber(company.vehicleCount)}</p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        <span>{t("dashboard.companiesKicker")}</span>
+                        <span>{share}%</span>
+                      </div>
+                      <div className="mt-2 h-2 rounded-full bg-slate-200">
+                        <div
+                          className="h-2 rounded-full bg-[linear-gradient(90deg,_#0f172a_0%,_#0f766e_100%)]"
+                          style={{ width: `${Math.max(share, company.vehicleCount > 0 ? 10 : 0)}%` }}
+                        />
                       </div>
                     </div>
 
@@ -271,7 +311,9 @@ const DashboardPage = () => {
                       </div>
                     </div>
                   </article>
-                ))}
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
@@ -326,6 +368,9 @@ const DashboardPage = () => {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-base font-semibold text-slate-950">{vehicle.model}</p>
                           <p className="mt-1 text-sm text-slate-500">{vehicle.plate}</p>
+                          <div className="mt-2 inline-flex items-center rounded-full bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500 shadow-sm">
+                            {vehicle.company?.name ?? "-"}
+                          </div>
                         </div>
 
                         <StatusBadge status={vehicle.status} />
