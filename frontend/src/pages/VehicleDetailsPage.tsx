@@ -61,6 +61,12 @@ const MAINTENANCE_STATUSES: MaintenanceStatus[] = ["SCHEDULED", "IN_PROGRESS", "
 const DOCUMENT_TYPES = ["REGISTRATION", "INSURANCE", "CONTRACT", "SERVICE", "PHOTO", "OTHER"] as const;
 
 type VehicleTab = (typeof TABS)[number];
+type OverviewField = {
+  label: string;
+  value: string;
+  subtle?: string | null;
+  highlight?: boolean;
+};
 
 const getDamageTone = (status: VehicleDamageStatus): "blue" | "green" | "yellow" | "red" => {
   switch (status) {
@@ -120,6 +126,36 @@ const emptyMaintenance = {
   mileage: "",
   reminderDate: "",
 };
+
+const OverviewFieldSection = ({
+  kicker,
+  title,
+  fields,
+  columns = "md:grid-cols-2 xl:grid-cols-2",
+}: {
+  kicker: string;
+  title: string;
+  fields: OverviewField[];
+  columns?: string;
+}) => (
+  <article className="space-y-4">
+    <div>
+      <p className="shell-kicker">{kicker}</p>
+      <h2 className="mt-2 text-xl font-semibold text-slate-950">{title}</h2>
+    </div>
+    <div className={`grid gap-4 ${columns}`}>
+      {fields.map((field) => (
+        <div key={`${title}-${field.label}`} className="shell-muted px-4 py-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{field.label}</p>
+          <p className={`mt-2 text-slate-950 ${field.highlight ? "text-base font-semibold" : "text-sm font-medium"}`}>
+            {field.value}
+          </p>
+          {field.subtle ? <p className="mt-2 text-xs leading-5 text-slate-500">{field.subtle}</p> : null}
+        </div>
+      ))}
+    </div>
+  </article>
+);
 
 const VehicleDetailsPage = () => {
   const { id } = useParams();
@@ -533,46 +569,148 @@ const VehicleDetailsPage = () => {
   const archivedDocuments = vehicle.documents.filter((document) => Boolean(document.archivedAt));
   const activeMaintenanceRecords = vehicle.maintenanceRecords.filter((record) => !record.archivedAt);
   const archivedMaintenanceRecords = vehicle.maintenanceRecords.filter((record) => Boolean(record.archivedAt));
+  const nextMaintenanceReminder =
+    activeMaintenanceRecords
+      .filter((record) => Boolean(record.reminderDate))
+      .sort((left, right) => new Date(left.reminderDate ?? 0).getTime() - new Date(right.reminderDate ?? 0).getTime())[0]
+      ?.reminderDate ?? null;
+  const unresolvedIncidentCount = vehicle.incidents.filter((incident) => incident.status !== "REPAIRED").length;
+  const archivedLabel = archiveTimestamp ? formatDate(archiveTimestamp) : "-";
 
-  const masterDataFields = [
-    [t("vehicle.company"), vehicle.company?.name ?? "-"],
-    [t("vehicle.plate"), vehicle.plate],
-    [t("vehicle.vin"), vehicle.vin],
-    [t("vehicle.driver"), vehicle.driver || "-"],
-    [t("vehicle.firstRegistration"), formatDate(vehicle.firstRegistration)],
-    [t("vehicle.lastUpdate"), formatDate(vehicle.lastUpdate)],
-    [t("vehicle.hsn"), vehicle.hsn],
-    [t("vehicle.tsn"), vehicle.tsn],
-    [t("vehicle.inventoryNumber"), vehicle.inventoryNumber || "-"],
-    [t("vehicle.customerNumber"), vehicle.customerNumber || "-"],
-    [t("vehicle.tireStorage"), vehicle.tireStorage || "-"],
-    [t("vehicle.price"), formatCurrency(vehicle.price)],
+  const overviewStats: OverviewField[] = [
+    {
+      label: t("vehicle.company"),
+      value: vehicle.company?.name ?? "-",
+      subtle: t("vehicleDetails.currentCompanyTitle"),
+      highlight: true,
+    },
+    {
+      label: t("vehicle.status"),
+      value: t(`status.${vehicle.status}`),
+      subtle: isArchived ? `${t("vehicleDetails.archivedTitle")} / ${archivedLabel}` : t("vehicleDetails.statusTitle"),
+      highlight: true,
+    },
+    {
+      label: t("vehicle.incidentCount"),
+      value: formatNumber(vehicle.incidents.length),
+      subtle:
+        unresolvedIncidentCount > 0
+          ? `${formatNumber(unresolvedIncidentCount)} ${t("incidentStatus.UNRESOLVED").toLowerCase()}`
+          : t("vehicle.noAccidentHistory"),
+      highlight: true,
+    },
+    {
+      label: t("vehicleDetails.maintenance.summary.total"),
+      value: formatNumber(activeMaintenanceRecords.length),
+      subtle: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-",
+      highlight: true,
+    },
+    {
+      label: t("vehicleDetails.documents.summary.total"),
+      value: formatNumber(activeDocuments.length),
+      subtle: archivedDocuments.length > 0 ? `${formatNumber(archivedDocuments.length)} ${t("common.archive").toLowerCase()}` : "-",
+      highlight: true,
+    },
+    {
+      label: t("vehicleDetails.previousCompaniesTitle"),
+      value: formatNumber(previousCompanies.length),
+      subtle: previousCompanies.length > 0 ? previousCompanies.join(" / ") : t("vehicleDetails.transferHistoryEmpty"),
+      highlight: true,
+    },
   ];
 
-  const contractFields = [
-    [t("vehicle.contractType"), vehicle.contractType || "-"],
-    [t("vehicle.contractValue"), formatCurrency(vehicle.contractValue)],
-    [t("vehicle.leasingRate"), formatCurrency(vehicle.leasingRate)],
-    [t("vehicle.interest"), `${formatNumber(vehicle.interest)}%`],
-    [t("vehicle.contractStart"), formatDate(vehicle.contractStart)],
-    [t("vehicle.contractEnd"), formatDate(vehicle.contractEnd)],
-    [t("vehicle.leasingPartner"), vehicle.leasingPartner || "-"],
-    [t("vehicle.contractPartner"), vehicle.contractPartner || "-"],
-    [t("vehicle.billingFrom"), formatDate(vehicle.billingFrom)],
-    [t("vehicle.billedTo"), formatDate(vehicle.billedTo)],
+  const ownershipFields: OverviewField[] = [
+    {
+      label: t("vehicle.company"),
+      value: vehicle.company?.name ?? "-",
+      subtle: t("vehicleDetails.currentCompanyTitle"),
+    },
+    {
+      label: t("vehicle.driver"),
+      value: vehicle.driver || "-",
+      subtle: t("vehicleDetails.statusTitle"),
+    },
+    {
+      label: t("vehicle.status"),
+      value: t(`status.${vehicle.status}`),
+      subtle: archiveTimestamp ? t("vehicleDetails.archivedAt", { date: archivedLabel }) : null,
+    },
+    {
+      label: t("vehicleDetails.previousCompaniesTitle"),
+      value: previousCompanies.length > 0 ? previousCompanies.join(" / ") : t("vehicleDetails.transferHistoryEmpty"),
+      subtle: `${formatNumber(transferEvents.length)} ${t("vehicleDetails.transferTimelineTitle").toLowerCase()}`,
+    },
   ];
 
-  const insuranceFields = [
-    [t("vehicle.insurancePartner"), vehicle.insurancePartner || "-"],
-    [t("vehicle.insuranceNumber"), vehicle.insuranceNumber || "-"],
-    [t("vehicle.insuranceCost"), formatCurrency(vehicle.insuranceCost)],
-    [t("vehicle.insuranceStart"), formatDate(vehicle.insuranceStart)],
-    [t("vehicle.insuranceEnd"), formatDate(vehicle.insuranceEnd)],
-    [t("vehicle.tuvDate"), formatDate(vehicle.tuvDate)],
-    [t("vehicle.mileage"), t("units.kilometers", { value: formatNumber(vehicle.mileage) })],
-    [t("vehicle.yearlyMileage"), t("units.kilometers", { value: formatNumber(vehicle.yearlyMileage) })],
-    [t("vehicle.taxPerYear"), formatCurrency(vehicle.taxPerYear)],
-    [t("vehicle.paymentDate"), formatDate(vehicle.paymentDate)],
+  const identityFields: OverviewField[] = [
+    { label: t("vehicle.model"), value: vehicle.model },
+    { label: t("vehicle.plate"), value: vehicle.plate },
+    { label: t("vehicle.vin"), value: vehicle.vin },
+    { label: t("vehicle.firstRegistration"), value: formatDate(vehicle.firstRegistration) },
+    { label: t("vehicle.lastUpdate"), value: formatDate(vehicle.lastUpdate) },
+    { label: t("vehicle.hsn"), value: vehicle.hsn || "-" },
+    { label: t("vehicle.tsn"), value: vehicle.tsn || "-" },
+    { label: t("vehicle.inventoryNumber"), value: vehicle.inventoryNumber || "-" },
+    { label: t("vehicle.customerNumber"), value: vehicle.customerNumber || "-" },
+    { label: t("vehicle.tireStorage"), value: vehicle.tireStorage || "-" },
+  ];
+
+  const contractFields: OverviewField[] = [
+    { label: t("vehicle.contractType"), value: vehicle.contractType || "-" },
+    { label: t("vehicle.contractStart"), value: formatDate(vehicle.contractStart) },
+    { label: t("vehicle.contractEnd"), value: formatDate(vehicle.contractEnd) },
+    { label: t("vehicle.leasingPartner"), value: vehicle.leasingPartner || "-" },
+    { label: t("vehicle.contractPartner"), value: vehicle.contractPartner || "-" },
+    { label: t("vehicle.billingFrom"), value: formatDate(vehicle.billingFrom) },
+    { label: t("vehicle.billedTo"), value: formatDate(vehicle.billedTo) },
+  ];
+
+  const financialFields: OverviewField[] = [
+    { label: t("vehicle.price"), value: formatCurrency(vehicle.price) },
+    { label: t("vehicle.contractValue"), value: formatCurrency(vehicle.contractValue) },
+    { label: t("vehicle.leasingRate"), value: formatCurrency(vehicle.leasingRate) },
+    { label: t("vehicle.insuranceCost"), value: formatCurrency(vehicle.insuranceCost) },
+    { label: t("vehicle.taxPerYear"), value: formatCurrency(vehicle.taxPerYear) },
+    { label: t("vehicle.interest"), value: `${formatNumber(vehicle.interest)}%` },
+  ];
+
+  const complianceFields: OverviewField[] = [
+    { label: t("vehicle.insurancePartner"), value: vehicle.insurancePartner || "-" },
+    { label: t("vehicle.insuranceNumber"), value: vehicle.insuranceNumber || "-" },
+    { label: t("vehicle.insuranceStart"), value: formatDate(vehicle.insuranceStart) },
+    { label: t("vehicle.insuranceEnd"), value: formatDate(vehicle.insuranceEnd) },
+    { label: t("vehicle.tuvDate"), value: formatDate(vehicle.tuvDate) },
+    {
+      label: t("vehicleDetails.maintenance.summary.nextReminder"),
+      value: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-",
+    },
+  ];
+
+  const operationalFields: OverviewField[] = [
+    { label: t("vehicle.mileage"), value: t("units.kilometers", { value: formatNumber(vehicle.mileage) }) },
+    { label: t("vehicle.yearlyMileage"), value: t("units.kilometers", { value: formatNumber(vehicle.yearlyMileage) }) },
+    { label: t("vehicle.paymentDate"), value: formatDate(vehicle.paymentDate) },
+    {
+      label: t("vehicle.damageStatus"),
+      value: t(`damageStatus.${vehicle.damageStatus}`),
+      subtle: vehicle.damageNotes || null,
+    },
+    {
+      label: t("vehicle.hadPreviousAccidents"),
+      value: vehicle.hadPreviousAccidents ? t("common.yes") : t("common.no"),
+    },
+    {
+      label: t("vehicle.incidentCount"),
+      value: `${formatNumber(vehicle.incidents.length)} / ${formatNumber(unresolvedIncidentCount)}`,
+      subtle: `${t("vehicleDetails.incidentsTitle")} / ${t("incidentStatus.UNRESOLVED")}`,
+    },
+  ];
+
+  const deadlineItems = [
+    { label: t("vehicle.contractEnd"), value: formatDate(vehicle.contractEnd) },
+    { label: t("vehicle.insuranceEnd"), value: formatDate(vehicle.insuranceEnd) },
+    { label: t("vehicle.tuvDate"), value: formatDate(vehicle.tuvDate) },
+    { label: t("vehicleDetails.maintenance.summary.nextReminder"), value: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-" },
   ];
 
   return (
@@ -644,27 +782,52 @@ const VehicleDetailsPage = () => {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
           <section className="shell-panel p-5 sm:p-6">
             <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="shell-muted px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicle.company")}</p>
-                  <p className="mt-3 text-lg font-semibold text-slate-950">{vehicle.company?.name ?? "-"}</p>
-                  <p className="mt-2 text-xs text-slate-500">{t("vehicleDetails.currentCompanyTitle")}</p>
-                </div>
-                <div className="shell-muted px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.transferTimelineTitle")}</p>
-                  <p className="mt-3 text-lg font-semibold text-slate-950">{formatNumber(transferEvents.length)}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {latestTransfer ? formatDate(latestTransfer.timestamp) : t("vehicleDetails.transferHistoryEmpty")}
-                  </p>
-                </div>
-                <div className="shell-muted px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.previousCompaniesTitle")}</p>
-                  <p className="mt-3 text-lg font-semibold text-slate-950">{formatNumber(previousCompanies.length)}</p>
-                  <p className="mt-2 text-xs text-slate-500">
-                    {previousCompanies.length > 0 ? previousCompanies.slice(0, 2).join(" / ") : t("vehicleDetails.transferHistoryEmpty")}
-                  </p>
-                </div>
+              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                {overviewStats.map((field) => (
+                  <div key={`overview-${field.label}`} className="shell-muted px-4 py-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{field.label}</p>
+                    <p className="mt-3 text-lg font-semibold text-slate-950">{field.value}</p>
+                    {field.subtle ? <p className="mt-2 text-xs leading-5 text-slate-500">{field.subtle}</p> : null}
+                  </div>
+                ))}
               </div>
+
+              <OverviewFieldSection
+                kicker={t("vehicleDetails.overviewKicker")}
+                title={t("vehicleDetails.generalSection")}
+                fields={ownershipFields}
+              />
+
+              <OverviewFieldSection
+                kicker={t("vehicleDetails.overviewKicker")}
+                title={t("vehicle.model")}
+                fields={identityFields}
+              />
+
+              <OverviewFieldSection
+                kicker={t("vehicleDetails.contractKicker")}
+                title={t("vehicleDetails.contractSection")}
+                fields={contractFields}
+              />
+
+              <OverviewFieldSection
+                kicker={t("vehicleDetails.contractKicker")}
+                title={t("vehicle.price")}
+                fields={financialFields}
+                columns="md:grid-cols-2 xl:grid-cols-3"
+              />
+
+              <OverviewFieldSection
+                kicker={t("vehicleDetails.insuranceKicker")}
+                title={t("vehicleDetails.insuranceSection")}
+                fields={complianceFields}
+              />
+
+              <OverviewFieldSection
+                kicker={t("vehicleDetails.statusPanel")}
+                title={t("vehicleDetails.statusTitle")}
+                fields={operationalFields}
+              />
 
               <article className="shell-muted px-4 py-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -709,50 +872,6 @@ const VehicleDetailsPage = () => {
                 )}
               </article>
 
-              <article className="space-y-4">
-                <div>
-                  <p className="shell-kicker">{t("vehicleDetails.overviewKicker")}</p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.generalSection")}</h2>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {masterDataFields.map(([label, value]) => (
-                    <div key={`master-${label}`} className="shell-muted px-4 py-3">
-                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
-                      <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="space-y-4">
-                <div>
-                  <p className="shell-kicker">{t("vehicleDetails.contractKicker")}</p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.contractSection")}</h2>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {contractFields.map(([label, value]) => (
-                    <div key={`contract-${label}`} className="shell-muted px-4 py-3">
-                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
-                      <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
-                    </div>
-                  ))}
-                </div>
-              </article>
-
-              <article className="space-y-4">
-                <div>
-                  <p className="shell-kicker">{t("vehicleDetails.insuranceKicker")}</p>
-                  <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.insuranceSection")}</h2>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {insuranceFields.map(([label, value]) => (
-                    <div key={`insurance-${label}`} className="shell-muted px-4 py-3">
-                      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</dt>
-                      <dd className="mt-2 text-sm font-medium text-slate-900">{value}</dd>
-                    </div>
-                  ))}
-                </div>
-              </article>
             </div>
           </section>
 
@@ -760,10 +879,19 @@ const VehicleDetailsPage = () => {
             <article className="shell-panel p-5 sm:p-6">
               <p className="shell-kicker">{t("vehicleDetails.statusPanel")}</p>
               <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.statusTitle")}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-500">{t("vehicleDetails.statusSubtitle")}</p>
               <div className="mt-5 space-y-4">
                 <select value={vehicle.status} onChange={(event) => void handleStatusUpdate(event.target.value as VehicleStatus)} disabled={!canEdit || submitting || isArchived} className="field-input">
                   {statusOptions.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}
                 </select>
+                <div className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50/80 px-4 py-4">
+                  {deadlineItems.map((item) => (
+                    <div key={item.label} className="flex items-center justify-between gap-4 border-b border-slate-200/80 py-2 last:border-b-0 last:pb-0 first:pt-0">
+                      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">{item.label}</span>
+                      <span className="text-sm font-semibold text-slate-900">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
                 {canTransfer && !isArchived ? (
                   <div className="space-y-3">
                     <select value={targetCompanyId} onChange={(event) => setTargetCompanyId(event.target.value)} className="field-input">

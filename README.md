@@ -87,6 +87,22 @@ STRIPE_PRO_PRICE_ID=
 STRIPE_ENTERPRISE_PRICE_ID=
 ```
 
+Optional Gmail SMTP environment variables for real email delivery:
+
+```bash
+APP_URL=http://localhost:5173
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=yourgmail@gmail.com
+SMTP_PASS=your-gmail-app-password
+SMTP_FROM="Soli Car <yourgmail@gmail.com>"
+SMTP_REQUIRE_TLS=false
+NOTIFICATION_DELIVERY_MODE=smtp
+```
+
+For Docker Compose, place these values in a root `.env` file before running `docker compose up --build -d`.
+
 ## Frontend commands
 
 ```bash
