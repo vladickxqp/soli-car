@@ -68,6 +68,13 @@ type OverviewField = {
   highlight?: boolean;
 };
 
+type SummaryMetric = {
+  label: string;
+  value: string;
+  helper?: string | null;
+  tone?: "default" | "teal" | "amber" | "rose" | "sky";
+};
+
 const getDamageTone = (status: VehicleDamageStatus): "blue" | "green" | "yellow" | "red" => {
   switch (status) {
     case "REPORTED":
@@ -156,6 +163,54 @@ const OverviewFieldSection = ({
     </div>
   </article>
 );
+
+const SummaryMetricCard = ({ label, value, helper, tone = "default" }: SummaryMetric) => {
+  const toneClasses: Record<NonNullable<SummaryMetric["tone"]>, string> = {
+    default: "border-slate-200 bg-white",
+    teal: "border-teal-200/80 bg-teal-50/80",
+    amber: "border-amber-200/80 bg-amber-50/80",
+    rose: "border-rose-200/80 bg-rose-50/80",
+    sky: "border-sky-200/80 bg-sky-50/80",
+  };
+
+  return (
+    <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${toneClasses[tone]}`}>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{label}</p>
+      <p className="mt-3 text-lg font-semibold tracking-tight text-slate-950">{value}</p>
+      {helper ? <p className="mt-2 text-xs leading-5 text-slate-500">{helper}</p> : null}
+    </div>
+  );
+};
+
+const getDeadlineSnapshotMeta = (dateValue: string | null | undefined, t: ReturnType<typeof useTranslation>["t"]) => {
+  if (!dateValue) {
+    return { label: "-", state: "none" as const };
+  }
+
+  const deadline = new Date(dateValue);
+  if (Number.isNaN(deadline.getTime())) {
+    return { label: "-", state: "none" as const };
+  }
+
+  const today = new Date();
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+  const startOfDeadline = new Date(deadline.getFullYear(), deadline.getMonth(), deadline.getDate()).getTime();
+  const diffDays = Math.round((startOfDeadline - startOfToday) / 86_400_000);
+
+  if (diffDays < 0) {
+    return { label: t("notifications.expired", { count: Math.abs(diffDays) }), state: "overdue" as const };
+  }
+
+  if (diffDays === 0) {
+    return { label: t("reminders.state.DUE"), state: "due" as const };
+  }
+
+  if (diffDays === 1) {
+    return { label: t("notifications.dayLeft"), state: "upcoming" as const };
+  }
+
+  return { label: t("notifications.daysLeft", { count: diffDays }), state: "upcoming" as const };
+};
 
 const VehicleDetailsPage = () => {
   const { id } = useParams();
@@ -576,6 +631,12 @@ const VehicleDetailsPage = () => {
       ?.reminderDate ?? null;
   const unresolvedIncidentCount = vehicle.incidents.filter((incident) => incident.status !== "REPAIRED").length;
   const archivedLabel = archiveTimestamp ? formatDate(archiveTimestamp) : "-";
+  const contractDeadlineMeta = getDeadlineSnapshotMeta(vehicle.contractEnd, t);
+  const insuranceDeadlineMeta = getDeadlineSnapshotMeta(vehicle.insuranceEnd, t);
+  const tuvDeadlineMeta = getDeadlineSnapshotMeta(vehicle.tuvDate, t);
+  const maintenanceDeadlineMeta = getDeadlineSnapshotMeta(nextMaintenanceReminder, t);
+  const primaryDeadlineMeta =
+    [contractDeadlineMeta, insuranceDeadlineMeta, tuvDeadlineMeta].find((item) => item.label !== "-") ?? { label: "-", state: "none" as const };
 
   const overviewStats: OverviewField[] = [
     {
@@ -602,7 +663,7 @@ const VehicleDetailsPage = () => {
     {
       label: t("vehicleDetails.maintenance.summary.total"),
       value: formatNumber(activeMaintenanceRecords.length),
-      subtle: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-",
+      subtle: nextMaintenanceReminder ? `${formatDate(nextMaintenanceReminder)} / ${maintenanceDeadlineMeta.label}` : "-",
       highlight: true,
     },
     {
@@ -683,6 +744,7 @@ const VehicleDetailsPage = () => {
     {
       label: t("vehicleDetails.maintenance.summary.nextReminder"),
       value: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-",
+      subtle: nextMaintenanceReminder ? maintenanceDeadlineMeta.label : null,
     },
   ];
 
@@ -707,42 +769,227 @@ const VehicleDetailsPage = () => {
   ];
 
   const deadlineItems = [
-    { label: t("vehicle.contractEnd"), value: formatDate(vehicle.contractEnd) },
-    { label: t("vehicle.insuranceEnd"), value: formatDate(vehicle.insuranceEnd) },
-    { label: t("vehicle.tuvDate"), value: formatDate(vehicle.tuvDate) },
-    { label: t("vehicleDetails.maintenance.summary.nextReminder"), value: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-" },
+    { label: t("vehicle.contractEnd"), value: formatDate(vehicle.contractEnd), helper: contractDeadlineMeta.label },
+    { label: t("vehicle.insuranceEnd"), value: formatDate(vehicle.insuranceEnd), helper: insuranceDeadlineMeta.label },
+    { label: t("vehicle.tuvDate"), value: formatDate(vehicle.tuvDate), helper: tuvDeadlineMeta.label },
+    {
+      label: t("vehicleDetails.maintenance.summary.nextReminder"),
+      value: nextMaintenanceReminder ? formatDate(nextMaintenanceReminder) : "-",
+      helper: nextMaintenanceReminder ? maintenanceDeadlineMeta.label : t("vehicleDetails.transferHistoryEmpty"),
+    },
+  ];
+
+  const heroMetrics: SummaryMetric[] = [
+    {
+      label: t("vehicle.company"),
+      value: vehicle.company?.name ?? "-",
+      helper: latestTransfer ? `${t("vehicleDetails.lastTransferTitle")} / ${formatDate(latestTransfer.timestamp)}` : t("vehicleDetails.currentCompanyTitle"),
+      tone: "teal",
+    },
+    {
+      label: t("vehicle.incidentCount"),
+      value: formatNumber(vehicle.incidents.length),
+      helper: unresolvedIncidentCount > 0 ? `${formatNumber(unresolvedIncidentCount)} ${t("incidentStatus.UNRESOLVED").toLowerCase()}` : t("vehicle.noAccidentHistory"),
+      tone: unresolvedIncidentCount > 0 ? "amber" : "default",
+    },
+    {
+      label: t("vehicleDetails.maintenance.summary.total"),
+      value: formatNumber(activeMaintenanceRecords.length),
+      helper: nextMaintenanceReminder ? `${formatDate(nextMaintenanceReminder)} / ${maintenanceDeadlineMeta.label}` : "-",
+      tone: nextMaintenanceReminder ? "sky" : "default",
+    },
+    {
+      label: t("vehicleDetails.documents.summary.total"),
+      value: formatNumber(activeDocuments.length),
+      helper: archivedDocuments.length > 0 ? `${formatNumber(archivedDocuments.length)} ${t("common.archive").toLowerCase()}` : formatNumber(vehicle.documents.length),
+      tone: archivedDocuments.length > 0 ? "rose" : "default",
+    },
+  ];
+
+  const ownershipSnapshot: SummaryMetric[] = [
+    {
+      label: t("vehicle.status"),
+      value: t(`status.${vehicle.status}`),
+      helper: isArchived ? `${t("vehicleDetails.archivedTitle")} / ${archivedLabel}` : t("vehicleDetails.statusSubtitle"),
+      tone: isArchived ? "rose" : "default",
+    },
+    {
+      label: t("vehicleDetails.previousCompaniesTitle"),
+      value: previousCompanies.length > 0 ? previousCompanies.join(" / ") : t("vehicleDetails.transferHistoryEmpty"),
+      helper: `${formatNumber(transferEvents.length)} ${t("vehicleDetails.transferTimelineTitle").toLowerCase()}`,
+      tone: previousCompanies.length > 0 ? "sky" : "default",
+    },
+    {
+      label: t("vehicleDetails.statusPanel"),
+      value: primaryDeadlineMeta.label,
+      helper: `${formatDate(vehicle.contractEnd)} / ${formatDate(vehicle.insuranceEnd)} / ${formatDate(vehicle.tuvDate)}`,
+      tone: primaryDeadlineMeta.state === "overdue" ? "rose" : primaryDeadlineMeta.state === "due" ? "amber" : "default",
+    },
   ];
 
   return (
     <div className="space-y-6">
-      <section className="shell-panel-strong overflow-hidden p-6 sm:p-7">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex items-start gap-5">
-            {vehicle.imageUrl ? (
-              <img src={resolveAssetUrl(vehicle.imageUrl)} alt={vehicle.model} className="h-24 w-24 rounded-[26px] object-cover shadow-lg" />
-            ) : (
-              <div className="flex h-24 w-24 items-center justify-center rounded-[26px] bg-slate-950 text-2xl font-semibold text-white">{vehicle.model.slice(0, 2).toUpperCase()}</div>
-            )}
-            <div>
-              <p className="shell-kicker">{t("vehicleDetails.overview")}</p>
-              <h1 className="shell-title mt-3">{vehicle.model}</h1>
-              <p className="shell-subtitle">{vehicle.plate} / {vehicle.company?.name}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <StatusBadge status={vehicle.status} />
-                <StatusBadge label={t(`damageStatus.${vehicle.damageStatus}`)} tone={getDamageTone(vehicle.damageStatus)} />
-                {vehicle.hadPreviousAccidents ? <StatusBadge label={t("vehicle.accidentHistory")} tone="yellow" /> : <StatusBadge label={t("vehicle.noAccidentHistory")} tone="green" />}
+      <section className="shell-panel-strong overflow-hidden">
+        <div className="grid xl:grid-cols-[minmax(0,1.45fr)_390px]">
+          <div className="relative overflow-hidden p-6 sm:p-7 lg:p-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(13,148,136,0.14),transparent_36%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.12),transparent_28%)]" />
+            <div className="relative space-y-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-5">
+                  {vehicle.imageUrl ? (
+                    <img
+                      src={resolveAssetUrl(vehicle.imageUrl)}
+                      alt={vehicle.model}
+                      className="h-28 w-28 rounded-[30px] object-cover shadow-[0_24px_64px_-36px_rgba(15,23,42,0.55)] sm:h-32 sm:w-32"
+                    />
+                  ) : (
+                    <div className="flex h-28 w-28 items-center justify-center rounded-[30px] bg-slate-950 text-3xl font-semibold text-white shadow-[0_24px_64px_-36px_rgba(15,23,42,0.55)] sm:h-32 sm:w-32">
+                      {vehicle.model.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="max-w-3xl">
+                    <p className="shell-kicker">{t("vehicleDetails.overview")}</p>
+                    <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">{vehicle.model}</h1>
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
+                      {vehicle.plate} / {vehicle.company?.name} / {vehicle.driver || "-"}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <StatusBadge status={vehicle.status} />
+                      <StatusBadge label={t(`damageStatus.${vehicle.damageStatus}`)} tone={getDamageTone(vehicle.damageStatus)} />
+                      {vehicle.hadPreviousAccidents ? (
+                        <StatusBadge label={t("vehicle.accidentHistory")} tone="yellow" />
+                      ) : (
+                        <StatusBadge label={t("vehicle.noAccidentHistory")} tone="green" />
+                      )}
+                      {isArchived ? <StatusBadge label={t("vehicleDetails.archivedTitle")} tone="slate" /> : null}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  <button type="button" onClick={handleExport} disabled={exporting} className="app-btn-primary">
+                    {exporting ? t("pdf.exporting") : t("pdf.export")}
+                  </button>
+                  <Link to={`/vehicles/${vehicle.id}/edit`} className={`app-btn-secondary ${!canEdit || isArchived ? "pointer-events-none opacity-50" : ""}`}>
+                    {t("common.edit")}
+                  </Link>
+                  {isArchived ? (
+                    <button type="button" onClick={handleRestoreVehicle} disabled={!canEdit} className="app-btn-secondary">
+                      {t("common.restore")}
+                    </button>
+                  ) : (
+                    <button type="button" onClick={handleArchiveVehicle} disabled={!canEdit} className="app-btn-ghost">
+                      {t("common.archive")}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {heroMetrics.map((metric) => (
+                  <SummaryMetricCard key={`hero-${metric.label}`} {...metric} />
+                ))}
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                <div className="shell-muted px-5 py-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.currentCompanyTitle")}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-3">
+                    <StatusBadge label={vehicle.company?.name ?? "-"} tone="blue" />
+                    {previousCompanies.slice(0, 3).map((companyName) => (
+                      <StatusBadge key={companyName} label={companyName} tone="slate" />
+                    ))}
+                  </div>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t("vehicle.vin")}</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-950">{vehicle.vin}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t("vehicle.inventoryNumber")}</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-950">{vehicle.inventoryNumber || "-"}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t("vehicle.contractEnd")}</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-950">{formatDate(vehicle.contractEnd)}</p>
+                      <p className="mt-1 text-xs text-slate-500">{contractDeadlineMeta.label}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">{t("vehicle.insuranceEnd")}</p>
+                      <p className="mt-2 text-sm font-semibold text-slate-950">{formatDate(vehicle.insuranceEnd)}</p>
+                      <p className="mt-1 text-xs text-slate-500">{insuranceDeadlineMeta.label}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="shell-muted px-5 py-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.statusPanel")}</p>
+                  <h2 className="mt-2 text-lg font-semibold text-slate-950">{t("vehicleDetails.statusTitle")}</h2>
+                  <div className="mt-4 space-y-3">
+                    {ownershipSnapshot.map((metric) => (
+                      <div key={`snapshot-${metric.label}`} className="rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-4">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{metric.label}</p>
+                        <p className="mt-2 text-sm font-semibold text-slate-950">{metric.value}</p>
+                        {metric.helper ? <p className="mt-2 text-xs leading-5 text-slate-500">{metric.helper}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <button type="button" onClick={handleExport} disabled={exporting} className="app-btn-primary">{exporting ? t("pdf.exporting") : t("pdf.export")}</button>
-            <Link to={`/vehicles/${vehicle.id}/edit`} className={`app-btn-secondary ${!canEdit || isArchived ? "pointer-events-none opacity-50" : ""}`}>{t("common.edit")}</Link>
-            {isArchived ? (
-              <button type="button" onClick={handleRestoreVehicle} disabled={!canEdit} className="app-btn-secondary">{t("common.restore")}</button>
-            ) : (
-              <button type="button" onClick={handleArchiveVehicle} disabled={!canEdit} className="app-btn-ghost">{t("common.archive")}</button>
-            )}
-          </div>
+
+          <aside className="border-t border-slate-200/80 bg-white/70 p-6 sm:p-7 xl:border-l xl:border-t-0">
+            <div className="space-y-5">
+              <div>
+                <p className="shell-kicker">{t("vehicleDetails.statusPanel")}</p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.statusTitle")}</h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">{t("vehicleDetails.statusSubtitle")}</p>
+              </div>
+
+              <div className="space-y-3">
+                <select
+                  value={vehicle.status}
+                  onChange={(event) => void handleStatusUpdate(event.target.value as VehicleStatus)}
+                  disabled={!canEdit || submitting || isArchived}
+                  className="field-input"
+                >
+                  {statusOptions.map((status) => (
+                    <option key={status} value={status}>
+                      {t(`status.${status}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                {deadlineItems.map((item) => (
+                  <div key={item.label} className="rounded-[24px] border border-slate-200 bg-slate-50/90 px-4 py-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{item.label}</p>
+                    <p className="mt-2 text-base font-semibold text-slate-950">{item.value}</p>
+                    <p className="mt-2 text-xs leading-5 text-slate-500">{item.helper}</p>
+                  </div>
+                ))}
+              </div>
+
+              {canTransfer && !isArchived ? (
+                <div className="space-y-3 rounded-[24px] border border-slate-200 bg-slate-50/90 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicleDetails.transferTitle")}</p>
+                  <select value={targetCompanyId} onChange={(event) => setTargetCompanyId(event.target.value)} className="field-input">
+                    <option value="">{t("vehicleDetails.selectCompany")}</option>
+                    {companies.map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {company.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={handleTransfer} disabled={!targetCompanyId || submitting} className="app-btn-primary w-full">
+                    {t("common.transfer")}
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </aside>
         </div>
       </section>
 
@@ -784,11 +1031,13 @@ const VehicleDetailsPage = () => {
             <div className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
                 {overviewStats.map((field) => (
-                  <div key={`overview-${field.label}`} className="shell-muted px-4 py-4">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{field.label}</p>
-                    <p className="mt-3 text-lg font-semibold text-slate-950">{field.value}</p>
-                    {field.subtle ? <p className="mt-2 text-xs leading-5 text-slate-500">{field.subtle}</p> : null}
-                  </div>
+                  <SummaryMetricCard
+                    key={`overview-${field.label}`}
+                    label={field.label}
+                    value={field.value}
+                    helper={field.subtle}
+                    tone={field.label === t("vehicle.incidentCount") && unresolvedIncidentCount > 0 ? "amber" : "default"}
+                  />
                 ))}
               </div>
 
@@ -907,8 +1156,17 @@ const VehicleDetailsPage = () => {
             <article className="shell-panel p-5 sm:p-6">
               <p className="shell-kicker">{t("vehicleDetails.damageKicker")}</p>
               <h2 className="mt-2 text-xl font-semibold text-slate-950">{t("vehicleDetails.damageTitle")}</h2>
-              <div className="mt-4 shell-muted px-4 py-3">
-                <p className="text-sm text-slate-700">{vehicle.damageNotes || "-"}</p>
+              <div className="mt-4 grid gap-3">
+                <div className="shell-muted px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicle.damageStatus")}</p>
+                  <div className="mt-3">
+                    <StatusBadge label={t(`damageStatus.${vehicle.damageStatus}`)} tone={getDamageTone(vehicle.damageStatus)} />
+                  </div>
+                </div>
+                <div className="shell-muted px-4 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">{t("vehicle.damageNotes")}</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-700">{vehicle.damageNotes || "-"}</p>
+                </div>
               </div>
             </article>
 

@@ -50,6 +50,57 @@ No manual setup is required for Docker. The app will wait for PostgreSQL, sync t
    - Billing: http://localhost:5173/billing
    - Fleet map: http://localhost:5173/map
 
+### Production HTTPS deployment
+
+Soli Car now ships with a dedicated production compose stack for a real server deployment with HTTPS.
+
+Files:
+
+- `docker-compose.prod.yml`
+- `deploy/Caddyfile`
+- `.env.production.example`
+
+Recommended server shape:
+
+- Ubuntu/Debian VPS
+- Docker + Docker Compose plugin installed
+- domain DNS `A` record pointing to the server
+- ports `80` and `443` open
+
+Steps:
+
+1. Copy `.env.production.example` to `.env.production`
+2. Set:
+   - `APP_DOMAIN`
+   - `ACME_EMAIL`
+   - `POSTGRES_PASSWORD`
+   - `JWT_SECRET`
+   - SMTP values if real email delivery is required
+3. Start the production stack:
+
+   ```bash
+   docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
+   ```
+
+4. Open:
+
+   - `https://your-domain`
+   - `https://your-domain/admin`
+
+How it works:
+
+- `caddy` terminates HTTPS and provisions Let's Encrypt certificates automatically
+- `frontend` is served behind the same public domain
+- `/api/*` is reverse proxied to the backend
+- `/uploads/vehicle-images/*` is proxied safely to the backend
+- backend CORS is restricted to `https://APP_DOMAIN`
+
+Notes:
+
+- keep `.env.production` server-local and do not commit it
+- for the first certificate issue, DNS must already point to the server
+- if you want demo content on the server, set `SEED_DEMO_DATA=true`
+
 ### Default demo users
 
 - admin@solicar.com / Admin1234!  (`ADMIN`, platform admin, company: `Soli Car HQ`)
